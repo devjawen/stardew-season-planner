@@ -6,7 +6,9 @@
   "UniqueID": "Jawen.SeasonPlanner",
   "EntryDll": "SeasonPlanner.dll",
   "MinimumApiVersion": "4.1.0",
-  "UpdateKeys": [],
+  "UpdateKeys": [
+    "GitHub:devjawen/stardew-season-planner"
+  ],
   "Dependencies": [
     {
       "UniqueID": "spacechase0.GenericModConfigMenu",

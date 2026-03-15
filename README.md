@@ -8,6 +8,8 @@
 [![Stardew Valley](https://img.shields.io/badge/Stardew%20Valley-1.6%2B-8a4b2b)](https://www.stardewvalley.net/)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-1f6feb)](LICENSE)
 
+Repository: https://github.com/devjawen/stardew-season-planner
+
 ---
 
 ## 📌 Overview / Genel Bakış
