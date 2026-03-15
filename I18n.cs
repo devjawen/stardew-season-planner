@@ -128,4 +128,14 @@ internal static class I18n
     public static string ChipPlanned()      => _t.Get("infotip.planned_count");
     public static string PlanBtn()          => _t.Get("infotip.plan_btn");
     public static string PlannedBtn()       => _t.Get("infotip.planned_btn");
+
+    // ── Tohum tooltip ─────────────────────────────────────────────────────
+    public static string SeedTooltipTitle()                      => _t.Get("seed.tooltip_title");
+    public static string SeedTooltipGrowDays(int days)           => _t.Get("seed.grow_days", new { days });
+    public static string SeedTooltipSeason(string season)        => _t.Get("seed.season", new { season });
+    public static string SeedTooltipHarvestDay(int day)          => _t.Get("seed.harvest_day", new { day });
+    public static string SeedTooltipWontFit()                    => _t.Get("seed.wont_fit");
+    public static string SeedTooltipLastPlant(int day, int left) => _t.Get("seed.last_plant", new { day, left });
+    public static string SeedTooltipLastDayPassed()              => _t.Get("seed.last_day_passed");
+    public static string SeedTooltipWrongSeason()                => _t.Get("seed.wrong_season");
 }

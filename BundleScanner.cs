@@ -52,6 +52,38 @@ public sealed class BundleScanner
         { 145, "Willy"  }, // Catfish (bait)
     };
 
+    // Tohum ID → hasat ID (Data/Crops'tan türetilmiş, yaygın tohumlar)
+    // Dinamik okuma için GetHarvestFromSeed() kullanılır, bu fallback içindir
+    public static readonly Dictionary<int, int> SeedToHarvest = new()
+    {
+        { 472, 24  }, // Parsnip Seeds → Parsnip
+        { 473, 188 }, // Bean Starter → Green Bean
+        { 474, 190 }, // Cauliflower Seeds → Cauliflower
+        { 475, 192 }, // Potato Seeds → Potato
+        { 476, 254 }, // Garlic Seeds → Garlic
+        { 477, 256 }, // Kale Seeds → Kale
+        { 478, 270 }, // Radish Seeds → Radish
+        { 479, 272 }, // Red Cabbage Seeds → Red Cabbage
+        { 480, 276 }, // Tomato Seeds → Tomato (summer)
+        { 481, 280 }, // Blueberry Seeds → Blueberry
+        { 482, 284 }, // Hot Pepper Seeds → Hot Pepper
+        { 483, 300 }, // Corn Seeds → Corn
+        { 484, 304 }, // Hops Starter → Hops
+        { 485, 398 }, // Wheat Seeds → Wheat
+        { 486, 400 }, // Melon Seeds → Melon
+        { 487, 454 }, // Ancient Seeds → Ancient Fruit
+        { 488, 24  }, // Spring Seeds (mixed) → Parsnip (approx)
+        { 489, 270 }, // Summer Seeds (mixed) → Radish (approx)
+        { 490, 300 }, // Fall Seeds (mixed) → Corn (approx)
+        { 495, 281 }, // Beet Seeds → Beet
+        { 496, 282 }, // Cranberry Seeds → Cranberry
+        { 497, 284 }, // Artichoke Seeds → Artichoke
+        { 498, 454 }, // Spring Onion (forage)
+        { 499, 433 }, // Coffee Bean → Coffee
+        { 745, 262 }, // Strawberry Seeds → Strawberry
+        { 802, 454 }, // Qi Bean → Qi Fruit
+    };
+
     // Balık item ID'leri
     private static readonly HashSet<int> FishIds = new()
     { 128,129,130,131,132,136,137,138,139,140,141,142,143,144,145,146,147,148,
@@ -167,5 +199,38 @@ public sealed class BundleScanner
         }
         catch { }
         return null;
+    }
+
+    /// <summary>
+    /// Tohum ID'sinden büyüme günü ve mevsim bilgisini döndürür.
+    /// Data/Crops'ta tohum key olarak kullanılır.
+    /// </summary>
+    public static (int growDays, string? season, int harvestId) GetCropInfoFromSeed(int seedId)
+    {
+        try
+        {
+            var crops = Game1.content.Load<Dictionary<string, string>>("Data/Crops");
+            if (crops.TryGetValue(seedId.ToString(), out string? raw))
+            {
+                string[] p = raw.Split('/');
+                // p[0] = seasons, p[1] = phase days (space separated), p[3] = harvest item id
+                if (p.Length < 4) return (0, null, -1);
+                string season = p[0].Split(' ')[0].ToLower();
+                int harvestId = int.TryParse(p[3], out int hid) ? hid : -1;
+                // Büyüme günü: p[1] içindeki sayıların toplamı (son evre hariç genellikle -1)
+                int growDays = 0;
+                foreach (var part in p[1].Split(' '))
+                    if (int.TryParse(part, out int d) && d > 0) growDays += d;
+                return (growDays, season, harvestId);
+            }
+        }
+        catch { }
+        // Fallback: SeedToHarvest'ten hasat ID'si al, CropGrowDays'ten büyüme günü
+        if (SeedToHarvest.TryGetValue(seedId, out int fallbackHarvest))
+        {
+            int fallbackGrow = CropGrowDays.GetValueOrDefault(fallbackHarvest, 0);
+            return (fallbackGrow, null, fallbackHarvest);
+        }
+        return (0, null, -1);
     }
 }

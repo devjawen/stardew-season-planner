@@ -85,5 +85,14 @@
   "infotip.seasonal": "seasonal",
   "infotip.planned_count": "planned",
   "infotip.plan_btn": "Plan",
-  "infotip.planned_btn": "Planned"
+  "infotip.planned_btn": "Planned",
+
+  "seed.tooltip_title": "Planting Info",
+  "seed.grow_days": "  Growth: {{days}} days",
+  "seed.season": "  Season: {{season}}",
+  "seed.harvest_day": "  If planted today → ready Day {{day}}",
+  "seed.wont_fit": "  ✘ Won't be ready this month!",
+  "seed.last_plant": "  Last planting day: Day {{day}}  ({{left}}d left)",
+  "seed.last_day_passed": "  ✘ Last planting day has passed!",
+  "seed.wrong_season": "  ✘ Wrong season — cannot plant now"
 }

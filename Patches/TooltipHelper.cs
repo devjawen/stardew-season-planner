@@ -33,6 +33,7 @@ internal static class TooltipHelper
 
     /// <summary>
     /// Hover edilen eşyayı eksik bundle listesiyle eşleştirip tooltip çizer.
+    /// Tohum ise ekim/büyüme bilgisi de gösterir.
     /// </summary>
     internal static void DrawBundleTooltip(
         SpriteBatch b,
@@ -43,8 +44,20 @@ internal static class TooltipHelper
         if (!config.ShowInventoryTooltips) return;
         if (hovered is not StardewValley.Object obj) return;
 
-        // Aynı eşyanın birden fazla bundle'da olabileceğini göz önünde bulundur
-        var matches = missing.Where(bi => bi.ItemId == obj.ParentSheetIndex).ToList();
+        int itemId = obj.ParentSheetIndex;
+
+        // Tohum mu? Ekim/büyüme bilgisi göster
+        bool isSeed = obj.Category == StardewValley.Object.SeedsCategory
+                   || BundleScanner.SeedToHarvest.ContainsKey(itemId);
+
+        if (isSeed)
+        {
+            DrawSeedTooltip(b, itemId);
+            return;
+        }
+
+        // Normal bundle tooltip
+        var matches = missing.Where(bi => bi.ItemId == itemId).ToList();
         if (matches.Count == 0) return;
 
         var lines  = new List<(string text, Color color)>();
@@ -89,6 +102,66 @@ internal static class TooltipHelper
         DrawBox(b, lines, 0, 0);
     }
 
+    private static void DrawSeedTooltip(SpriteBatch b, int seedId)
+    {
+        var (growDays, season, harvestId) = BundleScanner.GetCropInfoFromSeed(seedId);
+        if (growDays <= 0) return;
+
+        string currentSeason = Game1.currentSeason?.ToLower() ?? "";
+        int today            = Game1.dayOfMonth;
+        int harvestDay       = today + growDays;
+        int lastPlantDay     = 28 - growDays;
+        int daysLeft         = lastPlantDay - today;
+
+        bool wrongSeason  = season != null && season != currentSeason;
+        bool wontFitMonth = harvestDay > 28;
+
+        var lines = new List<(string text, Color color)>();
+
+        // Başlık
+        lines.Add((I18n.SeedTooltipTitle(), new Color(80, 60, 20)));
+
+        // Büyüme süresi
+        lines.Add((I18n.SeedTooltipGrowDays(growDays), Game1.textColor));
+
+        // Mevsim
+        if (season != null)
+            lines.Add((I18n.SeedTooltipSeason(I18n.SeasonLabel(season)), Game1.textColor));
+
+        if (wrongSeason)
+        {
+            // Yanlış mevsim — ekemezsin
+            lines.Add((I18n.SeedTooltipWrongSeason(), Color.Red));
+        }
+        else
+        {
+            // Bugün ekersen kaçıncı günde büyür
+            if (harvestDay <= 28)
+            {
+                lines.Add((I18n.SeedTooltipHarvestDay(harvestDay), new Color(34, 139, 34)));
+            }
+            else
+            {
+                // Bu ay yetişmez
+                lines.Add((I18n.SeedTooltipWontFit(), Color.Red));
+            }
+
+            // Son ekim günü
+            if (lastPlantDay >= 1)
+            {
+                Color dlColor = daysLeft <= 0 ? Color.Red
+                              : daysLeft <= 3 ? new Color(220, 80, 0)
+                              : daysLeft <= 7 ? new Color(200, 160, 0)
+                              : Game1.textColor;
+                lines.Add((daysLeft <= 0
+                    ? I18n.SeedTooltipLastDayPassed()
+                    : I18n.SeedTooltipLastPlant(lastPlantDay, daysLeft), dlColor));
+            }
+        }
+
+        DrawBox(b, lines, 0, 0);
+    }
+
     private static void DrawBox(SpriteBatch b, List<(string text, Color color)> lines, int x, int y)
     {
         const int padding = 12;
@@ -103,35 +176,14 @@ internal static class TooltipHelper
         int sw = Game1.uiViewport.Width;
         int sh = Game1.uiViewport.Height;
 
-        // Stardew'un native tooltip fare etrafında her yöne yerleşebilir.
-        // Çakışmayı önlemek için ekranı 4 bölgeye böl ve farenin karşı köşesine koy.
-        bool mouseRight  = mx > sw / 2;
-        bool mouseBottom = my > sh / 2;
+        // Farenin üstüne, yatayda fareyle ortalanmış koy.
+        // Native tooltip farenin sağına gider → çakışmaz.
+        x = mx - width / 2;
+        y = my - height - 20;
 
-        if (!mouseRight && !mouseBottom)
-        {
-            // Fare sol-üst → bizim tooltip sağ-alt
-            x = sw - width - 8;
-            y = sh - height - 8;
-        }
-        else if (mouseRight && !mouseBottom)
-        {
-            // Fare sağ-üst → bizim tooltip sol-alt
-            x = 8;
-            y = sh - height - 8;
-        }
-        else if (!mouseRight && mouseBottom)
-        {
-            // Fare sol-alt → bizim tooltip sağ-üst
-            x = sw - width - 8;
-            y = 8;
-        }
-        else
-        {
-            // Fare sağ-alt → bizim tooltip sol-üst
-            x = 8;
-            y = 8;
-        }
+        // Üstte yer yoksa farenin altına geç
+        if (y < 4)
+            y = my + 40;
 
         // Ekran sınırlarına sabitle
         x = Math.Clamp(x, 4, sw - width - 4);

@@ -85,5 +85,14 @@
   "infotip.seasonal": "bu mevsim",
   "infotip.planned_count": "planlandi",
   "infotip.plan_btn": "Planla",
-  "infotip.planned_btn": "Planlandi"
+  "infotip.planned_btn": "Planlandi",
+
+  "seed.tooltip_title": "Ekim Bilgisi",
+  "seed.grow_days": "  Buyume: {{days}} gun",
+  "seed.season": "  Mevsim: {{season}}",
+  "seed.harvest_day": "  Bugun ekersen → Gun {{day}}'de hazir",
+  "seed.wont_fit": "  ✘ Bu ay yetismez!",
+  "seed.last_plant": "  Son ekim gunu: Gun {{day}}  ({{left}}g kaldi)",
+  "seed.last_day_passed": "  ✘ Son ekim gunu gecti!",
+  "seed.wrong_season": "  ✘ Yanlis mevsim — simdi ekilemez"
 }
