@@ -15,30 +15,15 @@ marks last planting deadlines on your calendar, and sends smart HUD alerts — s
 
 <br/>
 
-> 🇺🇸 **English** | 🇹🇷 **[Türkçe aşağıda](#-türkçe)**
+<a href="#-türkçe">
+  <img src="https://img.shields.io/badge/🇺🇸%20English-current-4a90d9?style=flat-square" alt="English"/>
+</a>
+&nbsp;
+<a href="#-türkçe">
+  <img src="https://img.shields.io/badge/🇹🇷%20Türkçe-aşağıda%20↓-c0392b?style=flat-square" alt="Türkçe"/>
+</a>
 
 </div>
-
----
-
-## 📸 Screenshots
-
-> _Add your screenshots here! Place `.png` files in a `docs/` folder and reference them below._
-
-<!--
-<p align="center">
-  <img src="docs/bundle-panel.png" width="600" alt="Bundle Panel"/>
-  <br/><em>Bundle Panel — missing items grouped by category</em>
-</p>
-<p align="center">
-  <img src="docs/calendar-markers.png" width="600" alt="Calendar Markers"/>
-  <br/><em>Calendar — last planting days marked automatically</em>
-</p>
-<p align="center">
-  <img src="docs/hud-notification.png" width="600" alt="HUD Notification"/>
-  <br/><em>HUD alert on the morning of the last planting day</em>
-</p>
--->
 
 ---
 
