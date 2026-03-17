@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'   # v1.3.0, v1.4.0 gibi tag'lerde tetiklenir
+      - 'v*.*.*'
 
 jobs:
   build-and-release:
@@ -21,8 +21,22 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build (no deploy)
-        run: dotnet build --configuration Release /p:EnableModDeploy=false /p:EnableModZip=true
+      - name: Setup mock game folder
+        run: |
+          mkdir -p /tmp/stardew/smapi-internal
+          # ModBuildConfig'in ihtiyaç duyduğu minimum dosyaları oluştur
+          touch /tmp/stardew/Stardew\ Valley.dll
+          touch /tmp/stardew/StardewValley.GameData.dll
+
+      - name: Download SMAPI
+        run: |
+          curl -L "https://github.com/Pathoschild/SMAPI/releases/download/4.1.10/SMAPI-4.1.10-installer.zip" -o smapi.zip
+          unzip -q smapi.zip -d smapi_extracted
+          cp smapi_extracted/*/linux-x64/StardewModdingAPI.dll /tmp/stardew/ 2>/dev/null || true
+          cp smapi_extracted/*/linux-x64/*.dll /tmp/stardew/ 2>/dev/null || true
+
+      - name: Build
+        run: dotnet build --configuration Release /p:GamePath="/tmp/stardew" /p:EnableModDeploy=false /p:EnableModZip=true
 
       - name: Get version from tag
         id: version
@@ -33,7 +47,7 @@ jobs:
         run: |
           ZIP=$(find bin/Release -name "*.zip" | head -1)
           echo "ZIP_PATH=$ZIP" >> $GITHUB_OUTPUT
-          echo "ZIP_NAME=$(basename $ZIP)" >> $GITHUB_OUTPUT
+          echo "ZIP_NAME=$(basename "$ZIP")" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
