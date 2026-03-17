@@ -21,19 +21,38 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Setup mock game folder
+      - name: Setup game folder with SMAPI
         run: |
-          mkdir -p /tmp/stardew/smapi-internal
-          # ModBuildConfig'in ihtiyaç duyduğu minimum dosyaları oluştur
-          touch /tmp/stardew/Stardew\ Valley.dll
-          touch /tmp/stardew/StardewValley.GameData.dll
+          GAME=/tmp/stardew
+          mkdir -p "$GAME"
 
-      - name: Download SMAPI
-        run: |
-          curl -L "https://github.com/Pathoschild/SMAPI/releases/download/4.1.10/SMAPI-4.1.10-installer.zip" -o smapi.zip
-          unzip -q smapi.zip -d smapi_extracted
-          cp smapi_extracted/*/linux-x64/StardewModdingAPI.dll /tmp/stardew/ 2>/dev/null || true
-          cp smapi_extracted/*/linux-x64/*.dll /tmp/stardew/ 2>/dev/null || true
+          # NuGet cache'den ModBuildConfig paketini bul
+          PKG=$(find ~/.nuget/packages/pathoschild.stardew.modbuildconfig -name "*.nupkg" 2>/dev/null | head -1)
+
+          # SMAPI DLL'lerini NuGet paketinden çıkar
+          NUGET_DIR=$(find ~/.nuget/packages/pathoschild.stardew.modbuildconfig -type d | head -1)
+          echo "NuGet dir: $NUGET_DIR"
+          ls "$NUGET_DIR" || true
+
+          # Stardew Valley stub DLL'leri oluştur (boş assembly)
+          cat > /tmp/stub.cs << 'EOF'
+          namespace StardewValley { public class Game1 {} }
+          EOF
+
+          # SMAPI'yi GitHub Releases'tan indir (linux build)
+          curl -sL "https://github.com/Pathoschild/SMAPI/releases/download/4.1.10/SMAPI-4.1.10-installer.zip" -o /tmp/smapi.zip
+          cd /tmp && unzip -q smapi.zip -d smapi_out
+          find /tmp/smapi_out -name "*.dll" | head -20
+
+          # internal klasörü oluştur (SMAPI kontrolü için)
+          mkdir -p "$GAME/smapi-internal"
+
+          # DLL'leri kopyala
+          find /tmp/smapi_out -name "StardewModdingAPI.dll" -exec cp {} "$GAME/" \;
+          find /tmp/smapi_out -name "Stardew Valley.dll" -exec cp {} "$GAME/" \;
+          find /tmp/smapi_out -name "*.dll" -path "*/linux*" -exec cp {} "$GAME/" \; 2>/dev/null || true
+
+          ls "$GAME/"
 
       - name: Build
         run: dotnet build --configuration Release /p:GamePath="/tmp/stardew" /p:EnableModDeploy=false /p:EnableModZip=true
@@ -47,7 +66,6 @@ jobs:
         run: |
           ZIP=$(find bin/Release -name "*.zip" | head -1)
           echo "ZIP_PATH=$ZIP" >> $GITHUB_OUTPUT
-          echo "ZIP_NAME=$(basename "$ZIP")" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
