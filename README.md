@@ -255,5 +255,11 @@ Hata bulursanız veya yeni bir dil çevirisi eklemek isterseniz [Issue](https://
 ---
 
 <div align="center">
-  <sub>Made with ☕ and too many in-game seasons by <a href="https://github.com/devjawen">Jawen</a></sub>
+  <sub>Crafted with ☕ and 🎮 by 
+    <a href="https://github.com/devjawen">
+      <b>Jawen</b>
+    </a>
+  </sub>
+  <br/>
+  <img src="https://img.shields.io/badge/Status-In--Game-blueviolet?style=flat-square" alt="Status">
 </div>
