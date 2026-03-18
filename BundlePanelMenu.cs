@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
@@ -9,11 +9,10 @@ using StardewValley.Menus;
 
 namespace SeasonPlanner;
 
-// Panel: viewport'a göre dinamik boyutlandırma.
-// Temel çözünürlük 1080p (1920×1080). Scale faktörü kısa kenara göre hesaplanır.
+
 public sealed class BundlePanelMenu : IClickableMenu
 {
-    // ── Temel (1080p) boyutlar ────────────────────────────────────────────
+
     private const int BasePW    = 900;
     private const int BasePH    = 640;
     private const int BaseHeadH = 160;
@@ -29,18 +28,14 @@ public sealed class BundlePanelMenu : IClickableMenu
     private const int BaseSortBtnH = 28;
     private const int BaseChipH    = 26;
 
-    // ── Dinamik boyutlar (constructor'da hesaplanır) ───────────────────────
     private int PW, PH, HeadH, FootH;
     private int TabColW, CalColW, SbW, Pad;
     private int TabH, CardH, IconSz, SortBtnW, SortBtnH, ChipH;
 
-    // ── Font scales (scale'e göre ayarlanır) ─────────────────────────────
     private float FTitle, FName, FMid, FSmall, FTiny;
 
-    // Scale faktörü: 1080p = 1.0, 2K = ~1.33, 4K = ~2.0, 720p = ~0.67
     private float _scale;
 
-    // ── Colours ──────────────────────────────────────────────────────────
     private static readonly Color CInk     = new(52,  30,  10);
     private static readonly Color CSub     = new(100, 72,  38);
     private static readonly Color CDiv     = new(178, 148, 100);
@@ -61,7 +56,6 @@ public sealed class BundlePanelMenu : IClickableMenu
     private static readonly Color CBarMid  = new(200, 108, 0);
     private static readonly Color CBarBad  = new(188, 28,  28);
 
-    // ── Tabs ─────────────────────────────────────────────────────────────
     private static readonly BundleCategory?[] TabCats =
     {
         null, BundleCategory.Crop, BundleCategory.Fish,
@@ -79,25 +73,22 @@ public sealed class BundlePanelMenu : IClickableMenu
         BundleCategory.Crop         => CGreen,
         BundleCategory.Fish         => CBlue,
         BundleCategory.Artisan      => CPurple,
-        BundleCategory.Forage       => new Color(34, 120, 80),  // koyu yeşil-teal
+        BundleCategory.Forage       => new Color(34, 120, 80),
         BundleCategory.Construction => CBrown,
         _                           => COrange,
     };
 
-    // ── Sort ─────────────────────────────────────────────────────────────
     private enum SortMode { Urgency, Name, Bundle }
     private string[] SortLabels => new[] { I18n.SortUrgency(), I18n.SortName(), I18n.SortBundle() };
 
-    // ── Chip filtre state ─────────────────────────────────────────────────
     private enum ChipFilter { None, Urgent, Seasonal, Planned }
     private ChipFilter _chipFilter = ChipFilter.None;
 
-    // ── State ─────────────────────────────────────────────────────────────
     private int      _tab, _scroll;
     private int      _hoverTab = -1, _hoverCard = -1, _hoverSort = -1, _hoverChip = -1;
-    private bool     _drag;        // scrollbar sürükleme
+    private bool     _drag;
     private int      _dragY0, _dragScr0;
-    private bool     _dragPanel;   // panel sürükleme
+    private bool     _dragPanel;
     private int      _dragPanelX0, _dragPanelY0, _dragMouseX0, _dragMouseY0;
     private SortMode _sort = SortMode.Urgency;
 
@@ -106,10 +97,9 @@ public sealed class BundlePanelMenu : IClickableMenu
     private readonly HashSet<string>           _planned = new();
     private List<BundleItem>                   _vis     = new();
 
-    // ── Computed layout ───────────────────────────────────────────────────
     private int _px, _py;
     private int _barY, _chipY, _sortY;
-    private Rectangle[] _chipRects = new Rectangle[4]; // 0=eksik,1=acil,2=mevsim,3=planlandı
+    private Rectangle[] _chipRects = new Rectangle[4];
     private int _tcX, _tcY, _tcW, _tcH;
     private int _lX,  _lY,  _lW,  _lH;
     private int _sbX;
@@ -119,40 +109,60 @@ public sealed class BundlePanelMenu : IClickableMenu
 
     private int VisRows => _lH / CardH;
     private int MaxScr  => Math.Max(0, _vis.Count - VisRows);
-    private static string PlanKey(BundleItem i) => $"{i.ItemId}:{i.BundleName}:{i.Quality}:{i.Quantity}";
+    private static string PlanKey(BundleItem i) => $"{i.QualifiedItemId}:{i.BundleName}:{i.Quality}:{i.Quantity}";
+    private static string LegacyPlanKey(BundleItem i) => $"{i.ItemId}:{i.BundleName}:{i.Quality}:{i.Quantity}";
 
-    // ─────────────────────────────────────────────────────────────────────
     public BundlePanelMenu(IReadOnlyList<BundleItem> items, ModConfig? config = null)
-        : base(0, 0, 1, 1) // geçici, aşağıda initialize ile güncellenir
+        : base(0, 0, 1, 1)
     {
         _all    = items;
         _config = config;
 
         int sw = Game1.uiViewport.Width, sh = Game1.uiViewport.Height;
 
-        // Scale: kısa kenar 1080 = 1.0, 0.6 ile 2.0 arasında sınırla
-        _scale = Math.Clamp(Math.Min(sw, sh) / 1080f, 0.60f, 2.00f);
+        // Kullanıcı panel boyutu tercihi (50-150%)
+        float userScale = Math.Clamp((config?.PanelScale ?? 100) / 100f, 0.50f, 1.50f);
 
-        // Dinamik boyutlar
-        int S(int v) => (int)(v * _scale);
-        PW       = S(BasePW);    PH       = S(BasePH);
-        HeadH    = S(BaseHeadH); FootH    = S(BaseFootH);
-        TabColW  = S(BaseTabColW); CalColW = S(BaseCalColW);
-        SbW      = S(BaseSbW);   Pad      = S(BasePad);
-        TabH     = S(BaseTabH);  CardH    = S(BaseCardH);
-        IconSz   = S(BaseIconSz);
-        SortBtnW = S(BaseSortBtnW); SortBtnH = S(BaseSortBtnH);
-        ChipH    = S(BaseChipH);
+        // Panel maksimum 860x620 * userScale, viewport'un %88'ini geçmesin
+        int maxPW = Math.Min((int)(860 * userScale), (int)(sw * 0.88f));
+        int maxPH = Math.Min((int)(620 * userScale), (int)(sh * 0.88f));
 
-        // Font scale'leri de orantılı büyüt
-        FTitle = 0.75f * _scale; FName  = 0.60f * _scale;
-        FMid   = 0.50f * _scale; FSmall = 0.44f * _scale;
-        FTiny  = 0.40f * _scale;
+        // Scale: base 900x640 tasarımı viewport'a sığdır
+        float scaleW = maxPW / (float)BasePW;
+        float scaleH = maxPH / (float)BasePH;
+        _scale = Math.Clamp(Math.Min(scaleW, scaleH), 0.45f, 0.95f * userScale);
 
-        int centerX = (sw - PW) / 2;
-        int centerY = Math.Max(0, (sh - PH) / 2);
+        int S(int v) => Math.Max(1, (int)(v * _scale));
 
-        // Anchor'a göre varsayılan konum hesapla
+        PW      = Math.Min(S(BasePW),  maxPW);
+        PH      = Math.Min(S(BasePH),  maxPH);
+        HeadH   = S(BaseHeadH);
+        FootH   = S(BaseFootH);
+        SbW     = S(BaseSbW);
+        Pad     = S(BasePad);
+        TabH    = S(BaseTabH);
+        CardH   = S(BaseCardH);
+        IconSz  = S(BaseIconSz);
+        SortBtnW = S(BaseSortBtnW);
+        SortBtnH = S(BaseSortBtnH);
+        ChipH   = S(BaseChipH);
+
+        // Küçük ekranda takvimi gizle, tab sütununu daralt
+        bool showCalendar = sw >= 700 && _scale >= 0.60f;
+        CalColW  = showCalendar ? S(BaseCalColW) : 0;
+        TabColW  = sw < 600 ? S(90) : S(BaseTabColW);
+
+        // Font scale'leri viewport'a göre — minimum okunabilirlik korunur
+        float fBase = Math.Clamp(_scale, 0.50f, 1.80f);
+        FTitle = 0.72f * fBase;
+        FName  = 0.58f * fBase;
+        FMid   = 0.50f * fBase;
+        FSmall = 0.44f * fBase;
+        FTiny  = 0.38f * fBase;
+
+        // Header yüksekliğini içeriğe göre sıkıştır
+        HeadH = Math.Max(S(110), HeadH);
+
         static int AnchorX(PanelAnchor a, int sw, int pw) => a switch
         {
             PanelAnchor.TopLeft    or PanelAnchor.MiddleLeft   or PanelAnchor.BottomLeft   => 16,
@@ -168,7 +178,6 @@ public sealed class BundlePanelMenu : IClickableMenu
 
         PanelAnchor anchor = config?.PanelAnchor ?? PanelAnchor.Center;
 
-        // Custom + kaydedilmiş konum geçerliyse kullan
         bool usesSaved = false;
         if (config is { RememberPanelPosition: true, PanelAnchor: PanelAnchor.Custom, PanelX: >= 0, PanelY: >= 0 })
         {
@@ -191,30 +200,32 @@ public sealed class BundlePanelMenu : IClickableMenu
             _py = AnchorY(anchor, sh, PH);
         }
 
-        // Planlanmış öğeleri config'den yükle
         if (config?.PlannedItems is { Count: > 0 })
-            foreach (var k in config.PlannedItems) _planned.Add(k);
+        {
+            foreach (var key in config.PlannedItems)
+            {
+                BundleItem? match = _all.FirstOrDefault(i => LegacyPlanKey(i) == key);
+                _planned.Add(match is null ? key : PlanKey(match));
+            }
+        }
 
-        // Header rows
-        _barY  = _py + 46;
-        _chipY = _py + 72;
-        _sortY = _py + 108;
+        // Header içi konumlar — scale'e göre
+        _barY  = _py + S(38);
+        _chipY = _py + S(58);
+        _sortY = _py + S(88);
 
-        // Tab column
         _tcX = _px + Pad;
         _tcY = _py + HeadH;
         _tcW = TabColW - 4;
         _tcH = PH - HeadH - FootH;
 
-        // Calendar
-        _caW = CalColW - Pad;
+        _caW = CalColW > 0 ? CalColW - Pad : 0;
         _caH = PH - HeadH - FootH - Pad * 2;
         _caX = _px + PW - Pad - _caW;
         _caY = _py + HeadH + Pad;
 
-        // Card list
         int cardLeft  = _px + Pad + TabColW + 4;
-        int cardRight = _caX - SbW - 4;
+        int cardRight = CalColW > 0 ? _caX - SbW - 4 : _px + PW - SbW - 4;
         _lX  = cardLeft;
         _lY  = _py + HeadH + 4;
         _lW  = cardRight - cardLeft;
@@ -226,7 +237,6 @@ public sealed class BundlePanelMenu : IClickableMenu
 
         initialize(_px, _py, PW, PH);
 
-        // Kapat düğmesini sağ üst köşeye yerleştir
         upperRightCloseButton = new StardewValley.Menus.ClickableTextureComponent(
             new Rectangle(_px + PW - 36, _py - 8, 48, 48),
             Game1.mouseCursors,
@@ -242,7 +252,6 @@ public sealed class BundlePanelMenu : IClickableMenu
         var cat = TabCats[_tab];
         var src = cat is null ? _all : _all.Where(i => i.Category == cat);
 
-        // Chip filtresi
         string season = Game1.currentSeason?.ToLower() ?? "";
         src = _chipFilter switch
         {
@@ -276,9 +285,8 @@ public sealed class BundlePanelMenu : IClickableMenu
         return i.RequiresRain ? 4 : 10 + (int)i.Category;
     }
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  DRAW
-    // ═════════════════════════════════════════════════════════════════════
+
+
     public override void draw(SpriteBatch b)
     {
         b.Draw(Game1.fadeToBlackRect,
@@ -292,7 +300,7 @@ public sealed class BundlePanelMenu : IClickableMenu
 
         DrawHeader(b);
         DrawTabs(b);
-        DrawCalendar(b);
+        if (CalColW > 0) DrawCalendar(b);
         DrawCards(b);
         DrawScrollBar(b);
         DrawFooter(b);
@@ -302,17 +310,15 @@ public sealed class BundlePanelMenu : IClickableMenu
         drawMouse(b);
     }
 
-    // ── Header ────────────────────────────────────────────────────────────
     private void DrawHeader(SpriteBatch b)
     {
-        // Title
+
         string title = I18n.PanelTitle();
         Vector2 ts   = Game1.dialogueFont.MeasureString(title) * FTitle;
         b.DrawString(Game1.dialogueFont, title,
             new Vector2(_px + (PW - ts.X) / 2f, _py + 8),
             CInk, 0f, Vector2.Zero, FTitle, SpriteEffects.None, 0f);
 
-        // Progress bar
         int barX = _lX, barW = _lW + SbW + 2, barH = 12;
         int miss  = _all.Select(i => i.BundleName).Distinct().Count();
         float pct = Math.Clamp(1f - (float)miss / Math.Max(miss, 30), 0f, 1f);
@@ -329,18 +335,15 @@ public sealed class BundlePanelMenu : IClickableMenu
             new Vector2(barX + barW + 6, _barY + (barH - pv.Y) / 2f),
             CSub, 0f, Vector2.Zero, FTiny, SpriteEffects.None, 0f);
 
-        // Chip row
         int cx = barX;
         int cw0 = DrawChip(b, cx, _chipY, $"{_all.Count} {I18n.ChipMissing()}",     CInk,    _chipFilter == ChipFilter.None,     _hoverChip == 0); _chipRects[0] = new Rectangle(cx, _chipY, cw0, ChipH); cx += cw0 + 8;
         int cw1 = DrawChip(b, cx, _chipY, $"{_urgentCount} {I18n.ChipUrgent()}",    _urgentCount > 0 ? CUrgent : CSub, _chipFilter == ChipFilter.Urgent,   _hoverChip == 1); _chipRects[1] = new Rectangle(cx, _chipY, cw1, ChipH); cx += cw1 + 8;
         int cw2 = DrawChip(b, cx, _chipY, $"{_seasonCount} {I18n.ChipSeasonal()}",  CGold,   _chipFilter == ChipFilter.Seasonal, _hoverChip == 2); _chipRects[2] = new Rectangle(cx, _chipY, cw2, ChipH); cx += cw2 + 8;
         int cw3 = DrawChip(b, cx, _chipY, $"{_planned.Count} {I18n.ChipPlanned()}", CPlanned,_chipFilter == ChipFilter.Planned,  _hoverChip == 3); _chipRects[3] = new Rectangle(cx, _chipY, cw3, ChipH);
 
-        // Divider 1
         b.Draw(Game1.staminaRect,
             new Rectangle(_px + Pad, _py + 100, PW - Pad * 2, 1), CDiv * 0.40f);
 
-        // Sort row
         string sl   = $"{I18n.SortLabel()}:";
         Vector2 slv = Game1.dialogueFont.MeasureString(sl) * FMid;
         b.DrawString(Game1.dialogueFont, sl,
@@ -363,7 +366,6 @@ public sealed class BundlePanelMenu : IClickableMenu
                 tc, 0f, Vector2.Zero, FMid, SpriteEffects.None, 0f);
         }
 
-        // Divider 2
         b.Draw(Game1.staminaRect,
             new Rectangle(_px + Pad, _py + HeadH - 2, PW - Pad * 2, 2), CDiv * 0.50f);
     }
@@ -377,7 +379,7 @@ public sealed class BundlePanelMenu : IClickableMenu
         float brdAlpha = selected ? 0.90f : hovered ? 0.60f : 0.30f;
         b.Draw(Game1.staminaRect, new Rectangle(x, y, w, h), col * bgAlpha);
         DrawRect(b, x, y, w, h, col * brdAlpha);
-        // Seçiliyse alt çizgi
+
         if (selected)
             b.Draw(Game1.staminaRect, new Rectangle(x + 2, y + h - 3, w - 4, 2), col * 0.80f);
         b.DrawString(Game1.dialogueFont, text,
@@ -387,7 +389,6 @@ public sealed class BundlePanelMenu : IClickableMenu
         return w;
     }
 
-    // ── Tab column ────────────────────────────────────────────────────────
     private void DrawTabs(SpriteBatch b)
     {
         b.Draw(Game1.staminaRect,
@@ -428,7 +429,6 @@ public sealed class BundlePanelMenu : IClickableMenu
         }
     }
 
-    // ── Calendar ──────────────────────────────────────────────────────────
     private void DrawCalendar(SpriteBatch b)
     {
         string season = Game1.currentSeason?.ToLower() ?? "";
@@ -497,7 +497,6 @@ public sealed class BundlePanelMenu : IClickableMenu
             new Vector2(x+12, y), CSub, 0f, Vector2.Zero, FTiny, SpriteEffects.None, 0f);
     }
 
-    // ── Card list ─────────────────────────────────────────────────────────
     private void DrawCards(SpriteBatch b)
     {
         _scroll = Math.Clamp(_scroll, 0, MaxScr);
@@ -549,7 +548,6 @@ public sealed class BundlePanelMenu : IClickableMenu
             b.Draw(Game1.staminaRect, new Rectangle(_lX, cardY, _lW, CardH), cardBg);
             b.Draw(Game1.staminaRect, new Rectangle(_lX, cardY, isUrgent?5:3, CardH), accent*0.72f);
 
-            // Icon (52×52)
             try
             {
                 new StardewValley.Object(item.ItemId.ToString(), 1)
@@ -558,19 +556,15 @@ public sealed class BundlePanelMenu : IClickableMenu
             }
             catch { }
 
-            // Text block
             int tx = _lX + 8 + IconSz + 10;
 
-            // Name
             b.DrawString(Game1.dialogueFont,
                 item.ItemName + (item.Quantity > 1 ? $"  x{item.Quantity}" : ""),
                 new Vector2(tx, cardY+6), accent, 0f, Vector2.Zero, FName, SpriteEffects.None, 0f);
 
-            // Bundle name
             b.DrawString(Game1.dialogueFont, item.BundleName,
                 new Vector2(tx, cardY+30), CSub, 0f, Vector2.Zero, FMid, SpriteEffects.None, 0f);
 
-            // Tags
             var tags = new List<string>();
             if (item.Quality > 0)        tags.Add(I18n.QualityLabel(item.Quality));
             if (item.Season != null)     tags.Add(I18n.SeasonLabel(item.Season));
@@ -581,7 +575,6 @@ public sealed class BundlePanelMenu : IClickableMenu
                 b.DrawString(Game1.dialogueFont, string.Join("  ·  ", tags),
                     new Vector2(tx, cardY+50), CSub*0.70f, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
 
-            // Badge
             if (!string.IsNullOrEmpty(badge))
             {
                 float nameW = Game1.dialogueFont.MeasureString(
@@ -597,20 +590,20 @@ public sealed class BundlePanelMenu : IClickableMenu
                     Color.White, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
             }
 
-            // Plan button
-            const int PBW = 68, PBH = 26;
+            string pbl    = planned ? I18n.PlannedBtn() : I18n.PlanBtn();
+            float  pbScale = FSmall;
+            Vector2 pbsz  = Game1.dialogueFont.MeasureString(pbl) * pbScale;
+            int PBW = (int)pbsz.X + 10;
+            int PBH = (int)pbsz.Y + 6;
             int pbX = _lX + _lW - PBW - 8;
             int pbY = cardY + CardH - PBH - 6;
             b.Draw(Game1.staminaRect, new Rectangle(pbX, pbY, PBW, PBH),
                 planned ? CPlanned*0.70f : CDiv*0.28f);
             DrawRect(b, pbX, pbY, PBW, PBH, planned ? CPlanned : CDiv*0.42f);
-            string pbl   = planned ? I18n.PlannedBtn() : I18n.PlanBtn();
-            Vector2 pbsz = Game1.dialogueFont.MeasureString(pbl) * FMid;
             b.DrawString(Game1.dialogueFont, pbl,
                 new Vector2(pbX + (PBW - pbsz.X)/2f, pbY + (PBH - pbsz.Y)/2f),
-                planned ? Color.White : CSub, 0f, Vector2.Zero, FMid, SpriteEffects.None, 0f);
+                planned ? Color.White : CSub, 0f, Vector2.Zero, pbScale, SpriteEffects.None, 0f);
 
-            // Divider
             b.Draw(Game1.staminaRect,
                 new Rectangle(_lX+4, cardY+CardH-1, _lW-8, 1), CDiv*0.18f);
         }
@@ -619,7 +612,6 @@ public sealed class BundlePanelMenu : IClickableMenu
         b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
     }
 
-    // ── Scrollbar ─────────────────────────────────────────────────────────
     private void DrawScrollBar(SpriteBatch b)
     {
         if (MaxScr <= 0) return;
@@ -631,7 +623,6 @@ public sealed class BundlePanelMenu : IClickableMenu
         DrawRect(b, _sbX+1, ty+1, SbW-2, th-2, CInk*0.42f);
     }
 
-    // ── Footer ────────────────────────────────────────────────────────────
     private void DrawFooter(SpriteBatch b)
     {
         int fy = _py + PH - FootH;
@@ -651,7 +642,6 @@ public sealed class BundlePanelMenu : IClickableMenu
             CSub, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
     }
 
-    // ── Hover tooltip ─────────────────────────────────────────────────────
     private void DrawHoverTooltip(SpriteBatch b)
     {
         if (_hoverCard < 0 || _hoverCard >= _vis.Count) return;
@@ -700,15 +690,14 @@ public sealed class BundlePanelMenu : IClickableMenu
                 lines[i].col, 0f, Vector2.Zero, S, SpriteEffects.None, 0f);
     }
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  INPUT
-    // ═════════════════════════════════════════════════════════════════════
+
+
     public override void receiveScrollWheelAction(int direction)
         => _scroll = Math.Clamp(_scroll - Math.Sign(direction), 0, MaxScr);
 
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
-        // Chip filtre tıklaması
+
         ChipFilter[] filters = { ChipFilter.None, ChipFilter.Urgent, ChipFilter.Seasonal, ChipFilter.Planned };
         for (int i = 0; i < _chipRects.Length; i++)
         {
@@ -738,7 +727,9 @@ public sealed class BundlePanelMenu : IClickableMenu
             {
                 var item  = _vis[idx];
                 int cardY = _lY + (idx - _scroll) * CardH;
-                const int PBW=68, PBH=26;
+                string pblClick = _planned.Contains(PlanKey(_vis[idx])) ? I18n.PlannedBtn() : I18n.PlanBtn();
+                Vector2 pbszClick = Game1.dialogueFont.MeasureString(pblClick) * FSmall;
+                int PBW = (int)pbszClick.X + 10, PBH = (int)pbszClick.Y + 6;
                 int pbX = _lX+_lW-PBW-8, pbY = cardY+CardH-PBH-6;
                 if (x>=pbX && x<=pbX+PBW && y>=pbY && y<=pbY+PBH)
                 {
@@ -751,7 +742,6 @@ public sealed class BundlePanelMenu : IClickableMenu
         if (MaxScr > 0 && x >= _sbX && x <= _sbX+SbW && y >= _lY && y <= _lY+_lH)
         { _drag=true; _dragY0=y; _dragScr0=_scroll; return; }
 
-        // Başlık alanına tıklandıysa panel sürükleme başlat
         bool inHeader = x >= _px && x <= _px+PW && y >= _py && y <= _py+HeadH;
         if (inHeader)
         {
@@ -790,7 +780,7 @@ public sealed class BundlePanelMenu : IClickableMenu
         if (_dragPanel)
         {
             _dragPanel = false;
-            // Bırakınca konumu kaydet
+
             if (_config is { RememberPanelPosition: true })
             {
                 _config.PanelX      = _px;
@@ -820,7 +810,7 @@ public sealed class BundlePanelMenu : IClickableMenu
             int idx = (y-_lY)/CardH + _scroll;
             if (idx>=0 && idx<_vis.Count) _hoverCard=idx;
         }
-        // Başlık üzerindeyken sürükleme imleci
+
         bool inHeader = x >= _px && x <= _px+PW && y >= _py && y <= _py+HeadH;
         if (inHeader || _dragPanel)
             Game1.mouseCursor = Game1.cursor_grab;
@@ -839,7 +829,7 @@ public sealed class BundlePanelMenu : IClickableMenu
             {
                 _config.PanelX      = _px;
                 _config.PanelY      = _py;
-                _config.PanelAnchor = PanelAnchor.Custom; // sürüklendi
+                _config.PanelAnchor = PanelAnchor.Custom;
             }
         }
         _config.PlannedItems.Clear();
@@ -853,16 +843,17 @@ public sealed class BundlePanelMenu : IClickableMenu
         base.receiveKeyPress(key);
     }
 
-    // ═════════════════════════════════════════════════════════════════════
-    //  HELPERS
-    // ═════════════════════════════════════════════════════════════════════
+
+
     private void MovePanel(int nx, int ny)
     {
         _px = nx; _py = ny;
 
-        _barY  = _py + 46;
-        _chipY = _py + 72;
-        _sortY = _py + 108;
+        int S(int v) => Math.Max(1, (int)(v * _scale));
+
+        _barY  = _py + S(38);
+        _chipY = _py + S(58);
+        _sortY = _py + S(88);
 
         _tcX = _px + Pad;
         _tcY = _py + HeadH;
@@ -871,7 +862,7 @@ public sealed class BundlePanelMenu : IClickableMenu
         _caY = _py + HeadH + Pad;
 
         int cardLeft  = _px + Pad + TabColW + 4;
-        int cardRight = _caX - SbW - 4;
+        int cardRight = CalColW > 0 ? _caX - SbW - 4 : _px + PW - SbW - 4;
         _lX  = cardLeft;
         _lY  = _py + HeadH + 4;
         _lW  = cardRight - cardLeft;
@@ -896,3 +887,4 @@ public sealed class BundlePanelMenu : IClickableMenu
     private static string CapFirst(string s)
         => string.IsNullOrEmpty(s) ? s : char.ToUpper(s[0]) + s[1..];
 }
+

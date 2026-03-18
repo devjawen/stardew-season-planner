@@ -1,4 +1,4 @@
-{
+﻿{
   "panel.title": "Missing Bundle List",
   "panel.all_complete": "All bundles completed!",
   "panel.category_empty": "No missing items in this category.",
@@ -64,6 +64,8 @@
   "gmcm.warning_days.tooltip": "How many days before the deadline to show a warning.",
   "gmcm.panel_hotkey": "Bundle Panel Key",
   "gmcm.panel_hotkey.tooltip": "Key to open the missing bundle list.",
+  "gmcm.panel_scale": "Panel Size (%)",
+  "gmcm.panel_scale.tooltip": "Adjust the bundle panel size. 100% is default, 50% is smallest, 150% is largest.",
   "gmcm.remember_panel_position": "Remember Panel Position",
   "gmcm.remember_panel_position.tooltip": "Keep the bundle panel in the same place between sessions.",
   "gmcm.panel_anchor": "Panel Position",

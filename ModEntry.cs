@@ -1,30 +1,37 @@
-using HarmonyLib;
+﻿using HarmonyLib;
 using SeasonPlanner.Patches;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewValley;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace SeasonPlanner;
 
 public sealed class ModEntry : Mod
 {
-    // Mod bu SMAPI major versiyonu ile yazıldı.
-    // Farklı bir major gelirse Harmony patch'leri tehlikeli olabilir.
     private const int TestedSmapiMajor = 4;
     private const string OwnershipSignature = "Jawen | SeasonPlanner | JAWEN-SP-2026-001";
 
-    private ModConfig     _config  = null!;
+    internal static ModEntry? Instance { get; private set; }
+
+    private ModConfig _config = null!;
     private BundleScanner _scanner = null!;
-    private bool          _safeToRun = true; // uyumsuz SMAPI'de patch'leri atla
+    private bool _safeToRun = true;
+    private bool _eventsRegistered;
+
+    private readonly object _stateLock = new();
+    private IReadOnlyList<BundleItem> _latestMissing = Array.Empty<BundleItem>();
 
     public override void Entry(IModHelper helper)
     {
-        _config  = helper.ReadConfig<ModConfig>();
-        _scanner = new BundleScanner(Monitor);
+        Instance = this;
+
+        _config = helper.ReadConfig<ModConfig>();
+        _scanner = new BundleScanner(Monitor, helper);
         I18n.Initialize(helper.Translation);
 
-        // ── SMAPI sürüm kontrolü ─────────────────────────────────────────
         var smapi = helper.ModRegistry
             .Get("SMAPI")?.Manifest.Version
             ?? Constants.ApiVersion;
@@ -32,19 +39,14 @@ public sealed class ModEntry : Mod
         if (smapi.MajorVersion != TestedSmapiMajor)
         {
             Monitor.Log(
-                $"[SeasonPlanner] SMAPI major version mismatch! " +
-                $"Tested with {TestedSmapiMajor}.x, running on {smapi}. " +
-                $"Harmony patches are disabled to prevent crashes. " +
-                $"Please update the mod.",
+                $"[SeasonPlanner] SMAPI major version mismatch! Tested with {TestedSmapiMajor}.x, running on {smapi}. Harmony patches are disabled to prevent crashes. Please update the mod.",
                 LogLevel.Warn);
             _safeToRun = false;
         }
         else if (smapi.MinorVersion > 9)
         {
-            // Minor versiyon çok ilerlemişse uyarı ver ama çalışmaya devam et
             Monitor.Log(
-                $"[SeasonPlanner] Running on SMAPI {smapi} (tested up to {TestedSmapiMajor}.x). " +
-                $"If you encounter issues, please report them.",
+                $"[SeasonPlanner] Running on SMAPI {smapi} (tested up to {TestedSmapiMajor}.x). If you encounter issues, please report them.",
                 LogLevel.Debug);
         }
 
@@ -54,44 +56,84 @@ public sealed class ModEntry : Mod
             harmony.PatchAll();
         }
 
-        // Patch bağımlılıkları (safeToRun false olsa bile null kalmasın)
-        CalendarPagePatch.Config  = _config;
-        InventoryPagePatch.Config = _config;
-        ChestPatch.Config         = _config;
-
-        helper.Events.GameLoop.SaveLoaded        += OnSaveLoaded;
-        helper.Events.GameLoop.DayStarted        += OnDayStarted;
-        helper.Events.Display.MenuChanged        += OnMenuChanged;
-        helper.Events.Input.ButtonPressed        += OnButtonPressed;
-        helper.Events.GameLoop.GameLaunched      += OnGameLaunched;
-        helper.Events.Display.RenderedActiveMenu += OnRenderedActiveMenu;
-        helper.Events.Display.Rendered           += OnRendered;
+        RegisterEvents(helper.Events);
 
         Monitor.Log($"Season Planner & Demet Hatırlatıcı yüklendi (SMAPI {smapi}).", LogLevel.Info);
         Monitor.Log($"Ownership signature: {OwnershipSignature}", LogLevel.Trace);
     }
 
+    private void RegisterEvents(IModEvents events)
+    {
+        if (_eventsRegistered)
+            return;
+
+        events.GameLoop.SaveLoaded += OnSaveLoaded;
+        events.GameLoop.DayStarted += OnDayStarted;
+        events.GameLoop.ReturnedToTitle += OnReturnedToTitle;
+        events.Display.MenuChanged += OnMenuChanged;
+        events.Input.ButtonPressed += OnButtonPressed;
+        events.GameLoop.GameLaunched += OnGameLaunched;
+        events.Display.RenderedActiveMenu += OnRenderedActiveMenu;
+        events.Display.Rendered += OnRendered;
+        _eventsRegistered = true;
+    }
+
+    private void UpdateSharedState(IReadOnlyList<BundleItem>? items = null)
+    {
+        var resolved = items ?? _scanner.GetMissingItems(_config.FilterConstructionItems);
+        lock (_stateLock)
+            _latestMissing = resolved;
+    }
+
+    internal static bool TryGetSharedState(out IReadOnlyList<BundleItem> missingItems, out ModConfig? config)
+    {
+        var instance = Instance;
+        if (instance is null)
+        {
+            missingItems = Array.Empty<BundleItem>();
+            config = null;
+            return false;
+        }
+
+        lock (instance._stateLock)
+            missingItems = instance._latestMissing;
+        config = instance._config;
+        return true;
+    }
+
     private void OnSaveLoaded(object? sender, SaveLoadedEventArgs e)
     {
         _scanner.Invalidate();
-        PushDataToPatches();
+        UpdateSharedState();
     }
 
     private void OnDayStarted(object? sender, DayStartedEventArgs e)
     {
         _scanner.Invalidate();
         var missing = _scanner.GetMissingItems(_config.FilterConstructionItems);
-        PushDataToPatches(missing);
+        UpdateSharedState(missing);
 
-        if (!_config.ShowHudNotifications) return;
+        if (!_config.ShowHudNotifications)
+            return;
+
         CheckPlantingDeadlines(missing);
         CheckRainFishOpportunity(missing);
     }
 
+    private void OnReturnedToTitle(object? sender, ReturnedToTitleEventArgs e)
+    {
+        _scanner.Invalidate();
+        lock (_stateLock)
+            _latestMissing = Array.Empty<BundleItem>();
+    }
+
     private void OnButtonPressed(object? sender, ButtonPressedEventArgs e)
     {
-        if (!Context.IsPlayerFree && Game1.activeClickableMenu is not BundlePanelMenu) return;
-        if (e.Button != _config.PanelHotkey) return;
+        if (!Context.IsPlayerFree && Game1.activeClickableMenu is not BundlePanelMenu)
+            return;
+
+        if (e.Button != _config.PanelHotkey)
+            return;
 
         if (Game1.activeClickableMenu is BundlePanelMenu)
         {
@@ -99,10 +141,16 @@ public sealed class ModEntry : Mod
             return;
         }
 
-        if (!Context.IsWorldReady) return;
+        if (!Context.IsWorldReady)
+            return;
+
         var missing = _scanner.GetMissingItems(_config.FilterConstructionItems);
-        var panel   = new BundlePanelMenu(missing, _config);
-        panel.exitFunction = () => { panel.SavePositionPublic(); Helper.WriteConfig(_config); };
+        var panel = new BundlePanelMenu(missing, _config);
+        panel.exitFunction = () =>
+        {
+            panel.SavePositionPublic();
+            Helper.WriteConfig(_config);
+        };
         Game1.activeClickableMenu = panel;
     }
 
@@ -114,31 +162,41 @@ public sealed class ModEntry : Mod
          || e.NewMenu is StardewValley.Menus.ItemGrabMenu
          || e.NewMenu is StardewValley.Menus.ShopMenu)
         {
-            PushDataToPatches();
+            UpdateSharedState();
         }
     }
 
-    private void OnRenderedActiveMenu(object? sender, StardewModdingAPI.Events.RenderedActiveMenuEventArgs e)
+    private void OnRenderedActiveMenu(object? sender, RenderedActiveMenuEventArgs e)
     {
         DrawTooltipIfNeeded(e.SpriteBatch);
     }
 
-    // ShopMenu için tooltip artık ShopMenuPatch.Postfix ile çiziliyor
-    private void OnRendered(object? sender, StardewModdingAPI.Events.RenderedEventArgs e) { }
+    private void OnRendered(object? sender, RenderedEventArgs e)
+    {
+
+    }
 
     private void DrawTooltipIfNeeded(Microsoft.Xna.Framework.Graphics.SpriteBatch b)
     {
-        if (!_config.ShowInventoryTooltips && !_config.ShowChestTooltips) return;
+        if (!_config.ShowInventoryTooltips && !_config.ShowChestTooltips)
+            return;
+
         var menu = Game1.activeClickableMenu;
-        if (menu is null) return;
+        if (menu is null)
+            return;
 
-        // ShopMenu kendi postfix patch'i ile çiziyor — burada çizme (çift çizim olur)
-        if (menu is StardewValley.Menus.ShopMenu) return;
-        // GameMenu içinde ShopMenu page'i varsa da atla
-        if (menu is StardewValley.Menus.GameMenu gm2 &&
-            gm2.pages.Any(p => p is StardewValley.Menus.ShopMenu)) return;
+        if (menu is StardewValley.Menus.ShopMenu)
+            return;
 
-        var missing = _scanner.GetMissingItems(_config.FilterConstructionItems);
+        if (menu is StardewValley.Menus.GameMenu gm2
+            && gm2.pages.Any(p => p is StardewValley.Menus.ShopMenu))
+        {
+            return;
+        }
+
+        if (!TryGetSharedState(out var missing, out _))
+            return;
+
         Item? hovered = null;
 
         if (_config.ShowInventoryTooltips
@@ -147,43 +205,36 @@ public sealed class ModEntry : Mod
             && gm.pages[StardewValley.Menus.GameMenu.inventoryTab] is StardewValley.Menus.InventoryPage invPage)
         {
             hovered = invPage.hoveredItem
-                   ?? invPage.inventory?.hover(Game1.getMouseX(), Game1.getMouseY(), null);
+                ?? invPage.inventory?.hover(Game1.getMouseX(), Game1.getMouseY(), null);
         }
         else if (_config.ShowChestTooltips
             && menu is StardewValley.Menus.ItemGrabMenu igm)
         {
             hovered = igm.ItemsToGrabMenu?.hover(Game1.getMouseX(), Game1.getMouseY(), null)
-                   ?? igm.inventory?.hover(Game1.getMouseX(), Game1.getMouseY(), null);
+                ?? igm.inventory?.hover(Game1.getMouseX(), Game1.getMouseY(), null);
         }
 
-        if (hovered is null) return;
-        SeasonPlanner.Patches.TooltipHelper.DrawBundleTooltip(b, hovered, missing, _config);
+        if (hovered is null)
+            return;
+
+        TooltipHelper.DrawBundleTooltip(b, hovered, missing, _config);
     }
 
-    private void PushDataToPatches(
-        System.Collections.Generic.IReadOnlyList<BundleItem>? items = null)
+    private void CheckPlantingDeadlines(IReadOnlyList<BundleItem> missing)
     {
-        items ??= _scanner.GetMissingItems(_config.FilterConstructionItems);
-        CalendarPagePatch.MissingItems  = items;
-        InventoryPagePatch.MissingItems = items;
-        ChestPatch.MissingItems         = items;
-        ShopMenuPatch.MissingItems      = items;
-        ShopMenuPatch.Config            = _config;
-    }
-
-    private void CheckPlantingDeadlines(
-        System.Collections.Generic.IReadOnlyList<BundleItem> missing)
-    {
-        string season    = Game1.currentSeason.ToLower();
-        int    today     = Game1.dayOfMonth;
-        int    threshold = _config.CalendarWarningDaysLeft;
+        string season = Game1.currentSeason.ToLower();
+        int today = Game1.dayOfMonth;
+        int threshold = _config.CalendarWarningDaysLeft;
 
         foreach (var item in missing)
         {
-            if (item.Season != season || item.GrowDays <= 0) continue;
+            if (item.Season != season || item.GrowDays <= 0)
+                continue;
+
             int lastPlantDay = 28 - item.GrowDays;
-            int daysLeft     = lastPlantDay - today;
-            if (daysLeft < 0 || daysLeft > threshold) continue;
+            int daysLeft = lastPlantDay - today;
+            if (daysLeft < 0 || daysLeft > threshold)
+                continue;
 
             string msg = daysLeft == 0
                 ? I18n.HudPlantingToday(item.ItemName, item.BundleName)
@@ -193,16 +244,18 @@ public sealed class ModEntry : Mod
         }
     }
 
-    private void CheckRainFishOpportunity(
-        System.Collections.Generic.IReadOnlyList<BundleItem> missing)
+    private void CheckRainFishOpportunity(IReadOnlyList<BundleItem> missing)
     {
         bool rainTomorrow = Game1.weatherForTomorrow == Game1.weather_rain
                          || Game1.weatherForTomorrow == Game1.weather_lightning;
-        if (!rainTomorrow) return;
+        if (!rainTomorrow)
+            return;
 
         foreach (var item in missing)
         {
-            if (!item.RequiresRain) continue;
+            if (!item.RequiresRain)
+                continue;
+
             Game1.addHUDMessage(new HUDMessage(
                 I18n.HudRainFish(item.ItemName, item.BundleName),
                 HUDMessage.newQuest_type));
@@ -214,41 +267,47 @@ public sealed class ModEntry : Mod
     {
         var gmcm = Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>(
             "spacechase0.GenericModConfigMenu");
-        if (gmcm is null) return;
+        if (gmcm is null)
+            return;
 
         gmcm.Register(
-            mod:   ModManifest,
+            mod: ModManifest,
             reset: () => _config = new ModConfig(),
-            save:  () => Helper.WriteConfig(_config));
+            save: () => Helper.WriteConfig(_config));
 
         gmcm.AddBoolOption(ModManifest,
-            () => _config.ShowCalendarMarkers,   v => _config.ShowCalendarMarkers = v,
-            () => I18n.GmcmCalendarMarkers(),    () => I18n.GmcmCalendarMarkersTooltip());
+            () => _config.ShowCalendarMarkers, v => _config.ShowCalendarMarkers = v,
+            () => I18n.GmcmCalendarMarkers(), () => I18n.GmcmCalendarMarkersTooltip());
 
         gmcm.AddBoolOption(ModManifest,
-            () => _config.ShowHudNotifications,  v => _config.ShowHudNotifications = v,
-            () => I18n.GmcmHudNotifications(),   () => I18n.GmcmHudNotificationsTooltip());
+            () => _config.ShowHudNotifications, v => _config.ShowHudNotifications = v,
+            () => I18n.GmcmHudNotifications(), () => I18n.GmcmHudNotificationsTooltip());
 
         gmcm.AddBoolOption(ModManifest,
             () => _config.ShowInventoryTooltips, v => _config.ShowInventoryTooltips = v,
-            () => I18n.GmcmInventoryTooltip(),   () => I18n.GmcmInventoryTooltipTooltip());
+            () => I18n.GmcmInventoryTooltip(), () => I18n.GmcmInventoryTooltipTooltip());
 
         gmcm.AddBoolOption(ModManifest,
-            () => _config.ShowChestTooltips,     v => _config.ShowChestTooltips = v,
-            () => I18n.GmcmChestTooltip(),       () => I18n.GmcmChestTooltipTooltip());
+            () => _config.ShowChestTooltips, v => _config.ShowChestTooltips = v,
+            () => I18n.GmcmChestTooltip(), () => I18n.GmcmChestTooltipTooltip());
 
         gmcm.AddBoolOption(ModManifest,
             () => _config.FilterConstructionItems, v => _config.FilterConstructionItems = v,
             () => I18n.GmcmFilterConstruction(), () => I18n.GmcmFilterConstructionTooltip());
 
         gmcm.AddBoolOption(ModManifest,
-            () => _config.ShowShopSource,        v => _config.ShowShopSource = v,
-            () => I18n.GmcmShopSource(),         () => I18n.GmcmShopSourceTooltip());
+            () => _config.ShowShopSource, v => _config.ShowShopSource = v,
+            () => I18n.GmcmShopSource(), () => I18n.GmcmShopSourceTooltip());
+
+        gmcm.AddNumberOption(ModManifest,
+            () => _config.PanelScale, v => _config.PanelScale = v,
+            () => I18n.GmcmPanelScale(), () => I18n.GmcmPanelScaleTooltip(),
+            min: 50, max: 150, interval: 10, formatValue: v => $"{v}%");
 
         gmcm.AddNumberOption(ModManifest,
             () => _config.CalendarWarningDaysLeft, v => _config.CalendarWarningDaysLeft = v,
-            () => I18n.GmcmWarningDays(),        () => I18n.GmcmWarningDaysTooltip(),
-            min: 1, max: 14);
+            () => I18n.GmcmWarningDays(), () => I18n.GmcmWarningDaysTooltip(),
+            min: 1, max: 14, interval: null, formatValue: null);
 
         gmcm.AddKeybind(ModManifest,
             () => _config.PanelHotkey, v => _config.PanelHotkey = v,
@@ -258,12 +317,11 @@ public sealed class ModEntry : Mod
             () => _config.RememberPanelPosition, v => _config.RememberPanelPosition = v,
             () => I18n.GmcmRememberPanelPosition(), () => I18n.GmcmRememberPanelPositionTooltip());
 
-        // ── Konum ayarları ────────────────────────────────────────────────
         gmcm.AddTextOption(ModManifest,
             getValue: () => _config.PanelAnchor.ToString(),
             setValue: v =>
             {
-                if (System.Enum.TryParse<PanelAnchor>(v, out var anchor))
+                if (Enum.TryParse<PanelAnchor>(v, out var anchor))
                 {
                     _config.PanelAnchor = anchor;
                     if (anchor != PanelAnchor.Custom)
@@ -273,9 +331,9 @@ public sealed class ModEntry : Mod
                     }
                 }
             },
-            name:               () => I18n.GmcmPanelAnchor(),
-            tooltip:            () => I18n.GmcmPanelAnchorTooltip(),
-            allowedValues:      new[]
+            name: () => I18n.GmcmPanelAnchor(),
+            tooltip: () => I18n.GmcmPanelAnchorTooltip(),
+            allowedValues: new[]
             {
                 "TopLeft","TopCenter","TopRight",
                 "MiddleLeft","Center","MiddleRight",
@@ -288,12 +346,17 @@ public sealed class ModEntry : Mod
             getValue: () => false,
             setValue: v =>
             {
-                if (!v) return;
-                _config.PanelX      = -1;
-                _config.PanelY      = -1;
+                if (!v)
+                    return;
+
+                _config.PanelX = -1;
+                _config.PanelY = -1;
                 _config.PanelAnchor = PanelAnchor.Center;
             },
-            name:    () => I18n.GmcmResetPosition(),
+            name: () => I18n.GmcmResetPosition(),
             tooltip: () => I18n.GmcmResetPositionTooltip());
+
+        Helper.Events.GameLoop.GameLaunched -= OnGameLaunched;
     }
 }
+

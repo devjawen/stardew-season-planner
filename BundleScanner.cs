@@ -1,7 +1,10 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using StardewModdingAPI;
 using StardewValley;
+using StardewValley.GameData.Crops;
 using StardewValley.Locations;
 
 namespace SeasonPlanner;
@@ -10,96 +13,54 @@ public enum BundleCategory { Crop, Fish, Forage, Artisan, Construction, Other }
 
 public sealed class BundleItem
 {
-    public int            ItemId       { get; init; }
-    public string         ItemName     { get; init; } = string.Empty;
-    public int            Quantity     { get; init; }
-    public int            Quality      { get; init; }
-    public string?        Season       { get; init; }
-    public int            GrowDays     { get; init; }
-    public string         BundleName   { get; init; } = string.Empty;
-    public bool           RequiresRain { get; init; }
-    public BundleCategory Category     { get; init; }
-    public string?        ShopSource   { get; init; }
+    public int    ItemId          { get; init; }
+    public string QualifiedItemId { get; init; } = string.Empty;
+    public string ItemName        { get; init; } = string.Empty;
+    public int    Quantity        { get; init; }
+    public int    Quality         { get; init; }
+    public string? Season         { get; init; }
+    public int    GrowDays        { get; init; }
+    public string BundleName      { get; init; } = string.Empty;
+    public bool   RequiresRain    { get; init; }
+    public BundleCategory Category { get; init; }
+    public string? ShopSource     { get; init; }
+    public IReadOnlySet<string> ContextTags { get; init; } = new HashSet<string>();
+
+    public bool MatchesItem(Item item)
+    {
+        if (item is null) return false;
+
+        if (!string.IsNullOrWhiteSpace(QualifiedItemId)
+            && string.Equals(QualifiedItemId, item.QualifiedItemId, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return ItemId > 0
+            && item is StardewValley.Object obj
+            && obj.ParentSheetIndex == ItemId;
+    }
 }
 
 public sealed class BundleScanner
 {
-    // ── Hasat ID → büyüme günü (Data/Crops'tan türetilmiş, fallback) ─────
-    private static readonly Dictionary<int, int> CropGrowDays = new()
+    // Vanilla hardcoded shop sources (legacy int ID → shop name)
+    private static readonly Dictionary<int, string> VanillaShopSources = new()
     {
-        { 24,  4 }, { 188, 4 }, { 190, 6 }, { 192, 4 }, { 254, 4 },
-        { 256, 8 }, { 270, 4 }, { 272, 5 }, { 276, 9 }, { 280, 5 },
-        { 281, 9 }, // Cranberry
-        { 282, 5 }, // Beet
-        { 283, 8 }, // Artichoke
-        { 284, 6 }, { 300, 6 }, { 304, 6 }, { 398, 13 }, { 400, 6 },
-        { 421, 8 }, // Sunflower
-        { 433, 10}, // Coffee
-        { 454, 8 }, // Ancient Fruit / Qi Fruit
-        { 262, 14}, // Starfruit
-        { 266, 14}, // Red Cabbage (summer)
-        { 278, 14}, // Pumpkin
-        { 745, 8 }, // Strawberry
-    };
-
-    // ── Yağmurda tutulan balıklar ─────────────────────────────────────────
-    private static readonly HashSet<int> RainFish = new()
-    { 137, 138, 142, 143, 145, 149, 150, 151 };
-    // Catfish, Catfish(2), Eel, Octopus, Catfish(bait), Eel(2), Perch, Squid
-
-    // ── İnşaat malzemeleri ────────────────────────────────────────────────
-    private static readonly HashSet<int> ConstructionItems = new()
-    { 388, 390, 709, 766, 767, 382, 378, 380, 384, 386 };
-
-    // ── Toplama (forage) öğeleri ──────────────────────────────────────────
-    private static readonly HashSet<int> ForageItems = new()
-    {
-        16, 18, 20, 22,          // Spring: Daffodil, Leek, Dandelion, Parsnip
-        78, 281, 396, 398, 402,  // Summer: Cave Carrot, Cranberry, Spice Berry, Grape, Sweet Pea
-        281, 404, 406, 408, 410, // Fall: Chanterelle, Common Mushroom, Red Mushroom, Purple Mushroom
-        412, 414, 416, 418,      // Winter: Crystal Fruit, Holly, Crocus, Snow Yam
-        88, 90, 78, 420,         // Misc forage
-        257, 281, 724, 725, 726, // Beach forage
-    };
-
-    // ── Zanaat ürünleri ───────────────────────────────────────────────────
-    private static readonly HashSet<int> ArtisanIds = new()
-    {
-        340, 342, 344, 346, 348, 350, // Honey, Mayo, Void Mayo, Cheese, Goat Cheese, Cloth
-        424, 426, 428, 432,           // Jelly, Juice, Wine, Pale Ale
-        614, 724, 725, 726,           // Roe, Caviar, Aged Roe, Mead
-        306, 307, 308,                // Mayonnaise (quality), Cheese (quality)
-        614, 812,                     // Roe, Smoked Fish
-    };
-
-    // ── Mağaza kaynakları ─────────────────────────────────────────────────
-    private static readonly Dictionary<int, string> ShopSources = new()
-    {
-        // Pierre — Tohum dükkanı
         { 24,  "Pierre" }, { 188, "Pierre" }, { 190, "Pierre" }, { 192, "Pierre" },
         { 254, "Pierre" }, { 256, "Pierre" }, { 270, "Pierre" }, { 272, "Pierre" },
         { 276, "Pierre" }, { 280, "Pierre" }, { 284, "Pierre" }, { 300, "Pierre" },
         { 304, "Pierre" }, { 400, "Pierre" }, { 421, "Pierre" }, { 262, "Pierre" },
         { 266, "Pierre" }, { 278, "Pierre" }, { 281, "Pierre" }, { 282, "Pierre" },
         { 283, "Pierre" },
-        // Marnie — Hayvan ürünleri
-        { 176, "Marnie" }, { 174, "Marnie" }, // Egg, Large Egg
-        { 186, "Marnie" }, { 438, "Marnie" }, // Large Milk, Large Goat Milk
-        { 182, "Marnie" },                     // Milk
-        // Willy — Balık dükkanı
-        { 145, "Willy"  }, { 140, "Willy"  }, // Catfish, Walleye
-        { 131, "Willy"  },                     // Sardine
-        // Krobus — Kanalizasyon
-        { 372, "Krobus" }, { 766, "Krobus" }, // Void Egg, Slime
-        // Gus — Saloon
-        { 346, "Gus"    }, { 348, "Gus"    }, // Beer, Pale Ale
-        // Harvey — Klinik
-        { 773, "Harvey" },                     // Life Elixir
-        // Traveling Cart — Gezgin satıcı
+        { 176, "Marnie" }, { 174, "Marnie" }, { 186, "Marnie" }, { 438, "Marnie" },
+        { 182, "Marnie" },
+        { 145, "Willy"  }, { 140, "Willy"  }, { 131, "Willy"  },
+        { 372, "Krobus" }, { 766, "Krobus" },
+        { 346, "Gus"    }, { 348, "Gus"    },
+        { 773, "Harvey" },
         { 745, "Gezgin Satıcı" }, { 433, "Gezgin Satıcı" },
     };
 
-    // ── Tohum ID → hasat ID (fallback tablosu) ────────────────────────────
+    // Vanilla seed → harvest fallback (for seeds not in Data/Crops)
     public static readonly Dictionary<int, int> SeedToHarvest = new()
     {
         { 472, 24  }, { 473, 188 }, { 474, 190 }, { 475, 192 },
@@ -109,38 +70,33 @@ public sealed class BundleScanner
         { 488, 24  }, { 489, 270 }, { 490, 300 },
         { 495, 282 }, { 496, 281 }, { 497, 283 },
         { 499, 433 }, { 745, 262 }, { 802, 454 },
-        { 431, 421 }, // Sunflower Seeds → Sunflower
-        { 347, 262 }, // Rare Seed → Sweet Gem Berry
-        { 251, 433 }, // Coffee Bean → Coffee
+        { 431, 421 },
+        { 347, 262 },
+        { 251, 433 },
     };
 
-    private readonly IMonitor _monitor;
+    private readonly IMonitor            _monitor;
+    private readonly IModRegistry        _modRegistry;
+    private readonly IGameContentHelper  _gameContent;
+    private readonly IModContentHelper   _modContent;
+
     private string            _cacheKey = string.Empty;
     private List<BundleItem>  _cache    = new();
 
-    // Dinamik olarak yüklenen balık ID seti (ilk kullanımda doldurulur)
-    private static HashSet<int>? _dynamicFishIds;
-    private static HashSet<int> GetFishIds()
-    {
-        if (_dynamicFishIds != null) return _dynamicFishIds;
-        _dynamicFishIds = new HashSet<int>
-        {
-            128,129,130,131,132,136,137,138,139,140,141,142,143,144,145,146,147,148,
-            149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,
-            698,699,700,701,702,703,704,705,706,707,708,715,716,717,718,719,720,
-            721,722,723,734,775,795,796,798,799,800,801
-        };
-        try
-        {
-            var data = Game1.content.Load<Dictionary<string, string>>("Data/Fish");
-            foreach (var k in data.Keys)
-                if (int.TryParse(k, out int id)) _dynamicFishIds.Add(id);
-        }
-        catch { }
-        return _dynamicFishIds;
-    }
+    // qualifiedItemId → shop name, built once per session from Data/Shops
+    private Dictionary<string, string>? _shopSourceCache;
 
-    public BundleScanner(IMonitor monitor) => _monitor = monitor;
+    // qualifiedItemId → (growDays, season), built once per session from Data/Crops
+    private Dictionary<string, (int growDays, string? season)>? _cropInfoCache;
+
+    public BundleScanner(IMonitor monitor, IModHelper helper)
+    {
+        _monitor     = monitor;
+        _modRegistry = helper.ModRegistry;
+        _gameContent = helper.GameContent;
+        _modContent  = helper.ModContent;
+        LogFrameworkCompatibility();
+    }
 
     public IReadOnlyList<BundleItem> GetMissingItems(bool filterConstruction = false)
     {
@@ -150,6 +106,7 @@ public sealed class BundleScanner
             _cache    = BuildMissingList();
             _cacheKey = key;
         }
+
         return filterConstruction
             ? _cache.Where(i => i.Category != BundleCategory.Construction).ToList()
             : _cache;
@@ -157,9 +114,12 @@ public sealed class BundleScanner
 
     public void Invalidate()
     {
-        _cacheKey      = string.Empty;
-        _dynamicFishIds = null; // Yeni save yüklenince balık listesini de sıfırla
+        _cacheKey       = string.Empty;
+        _shopSourceCache = null;
+        _cropInfoCache   = null;
     }
+
+    // ─── Main scan ────────────────────────────────────────────────────────────
 
     private List<BundleItem> BuildMissingList()
     {
@@ -168,8 +128,11 @@ public sealed class BundleScanner
         if (Game1.getLocationFromName("CommunityCenter") is not CommunityCenter cc)
             return result;
 
+        EnsureShopSourceCache();
+        EnsureCropInfoCache();
+
         Dictionary<string, string> bundleData;
-        try { bundleData = Game1.content.Load<Dictionary<string, string>>("Data/Bundles"); }
+        try   { bundleData = _gameContent.Load<Dictionary<string, string>>("Data/Bundles"); }
         catch { return result; }
 
         foreach (var (key, raw) in bundleData)
@@ -181,113 +144,255 @@ public sealed class BundleScanner
             string itemsRaw   = parts[2];
 
             if (!int.TryParse(key.Split('/').Last(), out int bundleIndex)) continue;
-            if (!cc.bundles.TryGetValue(bundleIndex, out bool[] completion))  continue;
+            if (!cc.bundles.TryGetValue(bundleIndex, out bool[] completion)) continue;
 
             string[] tokens = itemsRaw.Split(' ');
             for (int i = 0; i + 2 < tokens.Length; i += 3)
             {
-                if (!int.TryParse(tokens[i],     out int itemId))  continue;
+                string qualifiedId = NormalizeQualifiedItemId(tokens[i]);
+                if (string.IsNullOrWhiteSpace(qualifiedId)) continue;
                 if (!int.TryParse(tokens[i + 1], out int qty))     continue;
                 if (!int.TryParse(tokens[i + 2], out int quality)) continue;
-                if (itemId < 0) continue;
 
                 int slot = i / 3;
                 if (slot < completion.Length && completion[slot]) continue;
 
-                int growDays = GetGrowDays(itemId);
+                int    legacyId  = TryGetLegacyObjectId(qualifiedId);
+                var    tags      = GetItemContextTags(qualifiedId, quality);
+                var    cropInfo  = GetCropInfo(qualifiedId, legacyId);
+                string? shopSrc  = ResolveShopSource(qualifiedId, legacyId);
 
                 result.Add(new BundleItem
                 {
-                    ItemId       = itemId,
-                    ItemName     = GetItemName(itemId),
-                    Quantity     = qty,
-                    Quality      = quality,
-                    Season       = GetItemSeason(itemId),
-                    GrowDays     = growDays,
-                    BundleName   = bundleName,
-                    RequiresRain = RainFish.Contains(itemId),
-                    Category     = ClassifyItem(itemId),
-                    ShopSource   = ShopSources.GetValueOrDefault(itemId),
+                    ItemId          = legacyId,
+                    QualifiedItemId = qualifiedId,
+                    ItemName        = GetItemName(qualifiedId, legacyId, quality),
+                    Quantity        = qty,
+                    Quality         = quality,
+                    Season          = cropInfo.season,
+                    GrowDays        = cropInfo.growDays,
+                    BundleName      = bundleName,
+                    RequiresRain    = IsRainItem(qualifiedId, tags),
+                    Category        = ClassifyItem(qualifiedId, legacyId, tags, cropInfo.growDays),
+                    ShopSource      = shopSrc,
+                    ContextTags     = tags,
                 });
             }
         }
 
-        _monitor.Log($"[BundleScanner] {result.Count} eksik eşya tarandı.", LogLevel.Debug);
+        _monitor.Log($"[BundleScanner] {result.Count} eksik item tarandı.", LogLevel.Debug);
         return result;
     }
 
-    // Data/Crops'tan dinamik büyüme günü okuma, fallback CropGrowDays
-    private static int GetGrowDays(int harvestId)
+    // ─── Crop info cache (vanilla + mod-added crops via Data/Crops) ───────────
+
+    private void EnsureCropInfoCache()
     {
-        if (CropGrowDays.TryGetValue(harvestId, out int days)) return days;
+        if (_cropInfoCache is not null) return;
+        _cropInfoCache = new Dictionary<string, (int, string?)>(StringComparer.OrdinalIgnoreCase);
+
+        Dictionary<string, CropData>? crops = null;
+        try { crops = _gameContent.Load<Dictionary<string, CropData>>("Data/Crops"); }
+        catch { return; }
+
+        foreach (var (_, data) in crops)
+        {
+            if (string.IsNullOrWhiteSpace(data.HarvestItemId)) continue;
+
+            int growDays = 0;
+            if (data.DaysInPhase != null)
+                foreach (var d in data.DaysInPhase)
+                    if (d > 0) growDays += d;
+
+            string? season = data.Seasons?.Count > 0 ? data.Seasons[0].ToString().ToLower() : null;
+
+            // Key by qualified harvest ID — covers both vanilla "(O)24" and mod items
+            string harvestQualified = NormalizeQualifiedItemId(data.HarvestItemId);
+            if (!string.IsNullOrWhiteSpace(harvestQualified))
+                _cropInfoCache.TryAdd(harvestQualified, (growDays, season));
+
+            // Also key by raw harvest ID string for legacy lookups
+            _cropInfoCache.TryAdd(data.HarvestItemId, (growDays, season));
+        }
+    }
+
+    private (int growDays, string? season) GetCropInfo(string qualifiedId, int legacyId)
+    {
+        if (_cropInfoCache is null) return (0, null);
+
+        if (_cropInfoCache.TryGetValue(qualifiedId, out var info)) return info;
+
+        if (legacyId > 0 && _cropInfoCache.TryGetValue(legacyId.ToString(), out info)) return info;
+
+        return (0, null);
+    }
+
+    // ─── Shop source cache (reads Data/Shops dynamically) ────────────────────
+
+    private void EnsureShopSourceCache()
+    {
+        if (_shopSourceCache is not null) return;
+        _shopSourceCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        // Seed vanilla hardcoded sources first
+        foreach (var (id, shop) in VanillaShopSources)
+            _shopSourceCache[$"(O){id}"] = shop;
+
+        // Then overlay with live Data/Shops so mod-added items are covered
         try
         {
-            var crops = Game1.content.Load<Dictionary<string, StardewValley.GameData.Crops.CropData>>("Data/Crops");
-            foreach (var (_, data) in crops)
+            var shops = _gameContent.Load<Dictionary<string, StardewValley.GameData.Shops.ShopData>>("Data/Shops");
+            foreach (var (shopId, shopData) in shops)
             {
-                if (!int.TryParse(data.HarvestItemId, out int hid) || hid != harvestId) continue;
-                int total = 0;
-                if (data.DaysInPhase != null)
-                    foreach (var d in data.DaysInPhase)
-                        if (d > 0) total += d;
-                return total;
+                if (shopData?.Items is null) continue;
+                string shopName = ResolveShopName(shopId);
+
+                foreach (var entry in shopData.Items)
+                {
+                    string? itemId = entry?.ItemId;
+                    if (string.IsNullOrWhiteSpace(itemId)) continue;
+
+                    string qualified = NormalizeQualifiedItemId(itemId);
+                    if (!string.IsNullOrWhiteSpace(qualified))
+                        _shopSourceCache.TryAdd(qualified, shopName);
+                }
             }
         }
+        catch (Exception ex)
+        {
+            _monitor.Log($"[BundleScanner] Data/Shops yüklenemedi: {ex.Message}", LogLevel.Trace);
+        }
+    }
+
+    private static string ResolveShopName(string shopId) => shopId switch
+    {
+        "SeedShop"       => "Pierre",
+        "AnimalShop"     => "Marnie",
+        "FishShop"       => "Willy",
+        "ScienceHouse"   => "Robin",
+        "Blacksmith"     => "Clint",
+        "Hospital"       => "Harvey",
+        "AdventureShop"  => "Marlon",
+        "Saloon"         => "Gus",
+        "Sandy"          => "Sandy",
+        "IceCreamStand"  => "Alex",
+        "Krobus"         => "Krobus",
+        "DesertShop"     => "Sandy",
+        "HatMouse"       => "Hat Mouse",
+        "QiGemShop"      => "Qi",
+        "ResortBar"      => "Gus",
+        "VolcanoShop"    => "Volcano Shop",
+        _                => shopId,
+    };
+
+    private string? ResolveShopSource(string qualifiedId, int legacyId)
+    {
+        if (_shopSourceCache is null) return null;
+        if (_shopSourceCache.TryGetValue(qualifiedId, out string? shop)) return shop;
+        if (legacyId > 0 && _shopSourceCache.TryGetValue($"(O){legacyId}", out shop)) return shop;
+        return null;
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    private static string NormalizeQualifiedItemId(string rawToken)
+    {
+        if (string.IsNullOrWhiteSpace(rawToken)) return string.Empty;
+        if (rawToken.StartsWith("(", StringComparison.Ordinal)) return rawToken;
+        return int.TryParse(rawToken, out int id) ? $"(O){id}" : rawToken;
+    }
+
+    private static int TryGetLegacyObjectId(string qualifiedItemId)
+    {
+        if (string.IsNullOrWhiteSpace(qualifiedItemId)) return -1;
+        if (!qualifiedItemId.StartsWith("(O)", StringComparison.OrdinalIgnoreCase)) return -1;
+        return int.TryParse(qualifiedItemId[3..], out int parsed) ? parsed : -1;
+    }
+
+    private static HashSet<string> GetItemContextTags(string qualifiedId, int quality)
+    {
+        try
+        {
+            Item? item = ItemRegistry.Create(qualifiedId, 1, quality, allowNull: true);
+            if (item is null) return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return new HashSet<string>(item.GetContextTags(), StringComparer.OrdinalIgnoreCase);
+        }
+        catch { return new HashSet<string>(StringComparer.OrdinalIgnoreCase); }
+    }
+
+    private static string GetItemName(string qualifiedId, int legacyId, int quality)
+    {
+        try
+        {
+            Item? item = ItemRegistry.Create(qualifiedId, 1, quality, allowNull: true);
+            if (item is not null) return item.DisplayName;
+        }
         catch { }
-        return 0;
+
+        if (legacyId > 0)
+        {
+            try { return new StardewValley.Object(legacyId.ToString(), 1).DisplayName; }
+            catch { }
+        }
+
+        return qualifiedId;
+    }
+
+    private static bool IsRainItem(string qualifiedId, IReadOnlyCollection<string> tags)
+    {
+        if (tags.Any(t => t.StartsWith("fish", StringComparison.OrdinalIgnoreCase)))
+            return tags.Any(t => t.Contains("rain", StringComparison.OrdinalIgnoreCase));
+
+        return qualifiedId is "(O)137" or "(O)138" or "(O)142" or "(O)143"
+                           or "(O)145" or "(O)149" or "(O)150" or "(O)151";
+    }
+
+    private static BundleCategory ClassifyItem(
+        string qualifiedId, int legacyId,
+        IReadOnlyCollection<string> tags, int growDays)
+    {
+        if (tags.Any(t => t.StartsWith("fish", StringComparison.OrdinalIgnoreCase)))
+            return BundleCategory.Fish;
+
+        if (tags.Any(t => t.Contains("artisan", StringComparison.OrdinalIgnoreCase)))
+            return BundleCategory.Artisan;
+
+        if (tags.Any(t => t.Contains("forage", StringComparison.OrdinalIgnoreCase)))
+            return BundleCategory.Forage;
+
+        if (tags.Any(t => t.Contains("crop", StringComparison.OrdinalIgnoreCase)) || growDays > 0)
+            return BundleCategory.Crop;
+
+        if (tags.Any(t => t.Contains("building_resource", StringComparison.OrdinalIgnoreCase)
+                       || t.Contains("construction", StringComparison.OrdinalIgnoreCase)))
+            return BundleCategory.Construction;
+
+        if (qualifiedId.StartsWith("(O)", StringComparison.OrdinalIgnoreCase)
+            && legacyId is 388 or 390 or 709 or 766 or 767 or 382 or 378 or 380 or 384 or 386)
+            return BundleCategory.Construction;
+
+        return BundleCategory.Other;
     }
 
     private static string LocalizeBundleName(string englishName)
     {
-        string key = "bundle." + englishName.ToLower().Replace(' ', '_').Replace("'", "");
+        string key       = "bundle." + englishName.ToLower().Replace(' ', '_').Replace("'", "");
         string localized = I18n.BundleName(key);
         return localized == key ? englishName : localized;
     }
 
-    private static BundleCategory ClassifyItem(int id)
-    {
-        if (ConstructionItems.Contains(id)) return BundleCategory.Construction;
-        if (GetFishIds().Contains(id))      return BundleCategory.Fish;
-        if (ArtisanIds.Contains(id))        return BundleCategory.Artisan;
-        if (ForageItems.Contains(id))       return BundleCategory.Forage;
-        if (CropGrowDays.ContainsKey(id))   return BundleCategory.Crop;
-        // Data/Crops'ta hasat ID olarak geçiyorsa Crop
-        if (GetGrowDays(id) > 0)            return BundleCategory.Crop;
-        return BundleCategory.Other;
-    }
+    // ─── Public helper used by TooltipHelper ──────────────────────────────────
 
-    private static string GetItemName(int id)
-    {
-        try   { return new StardewValley.Object(id.ToString(), 1).DisplayName; }
-        catch { return $"#{id}"; }
-    }
-
-    private static string? GetItemSeason(int itemId)
-    {
-        try
-        {
-            var crops = Game1.content.Load<Dictionary<string, StardewValley.GameData.Crops.CropData>>("Data/Crops");
-            foreach (var (_, data) in crops)
-            {
-                if (!int.TryParse(data.HarvestItemId, out int hid) || hid != itemId) continue;
-                return data.Seasons?.Count > 0 ? data.Seasons[0].ToString().ToLower() : null;
-            }
-        }
-        catch { }
-        return null;
-    }
-
-    /// <summary>Tohum ID'sinden büyüme günü, mevsim ve hasat ID'si döndürür.</summary>
     public static (int growDays, string? season, int harvestId) GetCropInfoFromSeed(int seedId)
     {
         try
         {
-            var crops = Game1.content.Load<Dictionary<string, StardewValley.GameData.Crops.CropData>>("Data/Crops");
+            var crops = Game1.content.Load<Dictionary<string, CropData>>("Data/Crops");
             if (crops.TryGetValue(seedId.ToString(), out var data))
             {
                 string? season   = data.Seasons?.Count > 0 ? data.Seasons[0].ToString().ToLower() : null;
-                int     harvestId = int.TryParse(data.HarvestItemId, out int hid) ? hid : -1;
-                int     growDays  = 0;
+                int harvestId    = int.TryParse(data.HarvestItemId, out int hid) ? hid : -1;
+                int growDays     = 0;
                 if (data.DaysInPhase != null)
                     foreach (var d in data.DaysInPhase)
                         if (d > 0) growDays += d;
@@ -295,7 +400,8 @@ public sealed class BundleScanner
             }
         }
         catch { }
-        // Fallback: eski string format dene
+
+        // Legacy string format fallback
         try
         {
             var crops = Game1.content.Load<Dictionary<string, string>>("Data/Crops");
@@ -305,8 +411,8 @@ public sealed class BundleScanner
                 if (p.Length >= 4)
                 {
                     string season    = p[0].Split(' ')[0].ToLower();
-                    int    harvestId = int.TryParse(p[3], out int hid) ? hid : -1;
-                    int    growDays  = 0;
+                    int harvestId    = int.TryParse(p[3], out int hid) ? hid : -1;
+                    int growDays     = 0;
                     foreach (var part in p[1].Split(' '))
                         if (int.TryParse(part, out int d) && d > 0) growDays += d;
                     return (growDays, season, harvestId);
@@ -314,12 +420,40 @@ public sealed class BundleScanner
             }
         }
         catch { }
-        // Son fallback: statik tablo
+
         if (SeedToHarvest.TryGetValue(seedId, out int fallbackHarvest))
         {
-            int fallbackGrow = CropGrowDays.GetValueOrDefault(fallbackHarvest, 0);
-            return (fallbackGrow, null, fallbackHarvest);
+            // Reuse crop data for grow days
+            try
+            {
+                var crops = Game1.content.Load<Dictionary<string, CropData>>("Data/Crops");
+                foreach (var (_, data) in crops)
+                {
+                    if (!int.TryParse(data.HarvestItemId, out int hid) || hid != fallbackHarvest) continue;
+                    int growDays = 0;
+                    if (data.DaysInPhase != null)
+                        foreach (var d in data.DaysInPhase)
+                            if (d > 0) growDays += d;
+                    return (growDays, null, fallbackHarvest);
+                }
+            }
+            catch { }
         }
+
         return (0, null, -1);
+    }
+
+    private void LogFrameworkCompatibility()
+    {
+        string[] knownFrameworks =
+        {
+            "spacechase0.SpaceCore",
+            "spacechase0.JsonAssets",
+            "spacechase0.DynamicGameAssets",
+        };
+
+        foreach (string fw in knownFrameworks)
+            if (_modRegistry.IsLoaded(fw))
+                _monitor.Log($"[BundleScanner] Detected framework mod: {fw}", LogLevel.Debug);
     }
 }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -26,11 +26,9 @@ internal static class TooltipHelper
 
     internal static string GetCategoryLabel(BundleCategory cat) => I18n.CategoryLabel(cat);
 
-    /// <summary>
-    /// hovered item için bundle tooltip çizer.
-    /// vanillaTooltipWidth: oyunun kendi tooltip'inin tahmini genişliği (px).
-    /// Sağa sığıyorsa oyunun tooltip'inin sağına, sığmıyorsa farenin soluna yerleşir.
-    /// </summary>
+
+
+
     internal static void DrawBundleTooltip(
         SpriteBatch b,
         Item? hovered,
@@ -50,14 +48,16 @@ internal static class TooltipHelper
         if (isSeed)
         {
             var (_, _, harvestId) = BundleScanner.GetCropInfoFromSeed(itemId);
+            string harvestQualified = harvestId > 0 ? $"(O){harvestId}" : string.Empty;
             var harvestMatches = harvestId > 0
-                ? missing.Where(bi => bi.ItemId == harvestId).ToList()
+                ? missing.Where(bi => string.Equals(bi.QualifiedItemId, harvestQualified, System.StringComparison.OrdinalIgnoreCase)
+                                   || bi.ItemId == harvestId).ToList()
                 : new List<BundleItem>();
             DrawSeedTooltip(b, itemId, BuildBundleLines(harvestMatches, config), vanillaTooltipWidth);
             return;
         }
 
-        var matches = missing.Where(bi => bi.ItemId == itemId).ToList();
+        var matches = missing.Where(bi => bi.MatchesItem(hovered)).ToList();
         if (matches.Count == 0) return;
         DrawBox(b, BuildBundleLines(matches, config), vanillaTooltipWidth);
     }
@@ -81,7 +81,7 @@ internal static class TooltipHelper
         foreach (var match in matches)
         {
             Color headerColor = GetCategoryColor(match.Category);
-            if (!first) lines.Add(("─────────────────", new Color(150, 150, 150)));
+            if (!first) lines.Add(("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€", new Color(150, 150, 150)));
             first = false;
 
             lines.Add((I18n.TooltipRequiredFor(match.BundleName), headerColor));
@@ -173,7 +173,7 @@ internal static class TooltipHelper
         if (bundleLines.Count > 0)
         {
             if (lines.Count > 0)
-                lines.Add(("─────────────────", new Color(150, 150, 150)));
+                lines.Add(("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€", new Color(150, 150, 150)));
             lines.AddRange(bundleLines);
         }
 
@@ -181,24 +181,20 @@ internal static class TooltipHelper
         DrawBox(b, lines, vanillaTooltipWidth);
     }
 
-    /// <summary>
-    /// Tooltip kutusunu çizer.
-    ///
-    /// Konum mantığı:
-    ///   vanillaTooltipWidth > 0 (ShopMenu):
-    ///     → Oyunun tooltip'i farenin SAĞında (mx + vanillaW).
-    ///       Bizimki farenin SOLUNA gider: x = mx - ourWidth - gap
-    ///       Sol tarafa sığmazsa (x < 0) farenin sağına, oyunun tooltip'inin sağına gider.
-    ///
-    ///   vanillaTooltipWidth = 0 (envanter/sandık):
-    ///     → Farenin soluna, sığmazsa sağına.
-    /// </summary>
+
+
+
+
+
+
+
+
     internal static void DrawBox(SpriteBatch b, List<(string text, Color color)> lines,
         int vanillaTooltipWidth = 0)
     {
         const int Pad    = 12;
         const int Margin = 8;
-        const int Gap    = 16; // tooltip'ler arası boşluk
+        const int Gap    = 16;
 
         int lineH = (int)Game1.smallFont.MeasureString("A").Y + 6;
         int sw    = Game1.uiViewport.Width;
@@ -217,7 +213,7 @@ internal static class TooltipHelper
         {
             visible = new List<(string text, Color color)>(lines.Take(maxLines - 1))
             {
-                ("▼ ...", new Color(120, 120, 120))
+                ("â–¼ ...", new Color(120, 120, 120))
             };
         }
 
@@ -229,17 +225,16 @@ internal static class TooltipHelper
 
         if (vanillaTooltipWidth > 0)
         {
-            // ShopMenu: farenin soluna çiz, sığmazsa sağına
+
             int leftX = mx - width - Gap;
             x = leftX >= Margin ? leftX : mx + Gap;
             x = Math.Clamp(x, Margin, sw - width - Margin);
 
-            // Dikey: farenin üstüne hizala, ekran sınırına clamp
             y = Math.Clamp(my - height - Gap, Margin, sh - height - Margin);
         }
         else
         {
-            // Normal (envanter/sandık): sol-alt köşeye sabit
+
             x = Margin;
             y = sh - height - Margin;
         }
@@ -260,3 +255,4 @@ internal static class TooltipHelper
                 visible[i].color);
     }
 }
+
