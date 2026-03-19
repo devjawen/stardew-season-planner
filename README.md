@@ -146,17 +146,7 @@ git clone https://github.com/devjawen/stardew-season-planner.git
 cd stardew-season-planner
 ```
 
-Edit `Directory.Build.props` and set your game path:
-
-```xml
-<Project>
-  <PropertyGroup>
-    <GamePath>C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley</GamePath>
-  </PropertyGroup>
-</Project>
-```
-
-Then build:
+Set your game path in `Directory.Build.props` (not tracked by git), then build:
 
 ```bash
 dotnet build -c Release
