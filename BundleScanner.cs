@@ -17,7 +17,8 @@ public sealed class BundleItem
     public string ItemName        { get; init; } = string.Empty;
     public int    Quantity        { get; init; }
     public int    Quality         { get; init; }
-    public string? Season         { get; init; }   // null = greenhouse / all-season
+    public string? Season         { get; init; }   // ilk mevsim (geriye dönük uyumluluk)
+    public IReadOnlyList<string> Seasons { get; init; } = Array.Empty<string>(); // tüm mevsimler
     public int    GrowDays        { get; init; }
     public bool   IsGreenhouse    { get; init; }   // true = no season restriction
     public string BundleName      { get; init; } = string.Empty;
@@ -53,6 +54,23 @@ public sealed class BundleItem
                 if (string.Equals(unqualified, item.ItemId, StringComparison.OrdinalIgnoreCase))
                     return true;
             }
+        }
+
+        // JA/DGA fallback: context tag "item_id_object_<unqualifiedId>"
+        // JA registers items with context tags like "item_id_object_modname.itemname"
+        if (!string.IsNullOrWhiteSpace(QualifiedItemId))
+        {
+            string rawId = QualifiedItemId.StartsWith("(", StringComparison.Ordinal)
+                ? QualifiedItemId[(QualifiedItemId.IndexOf(')') + 1)..].ToLower()
+                : QualifiedItemId.ToLower();
+            string expectedTag = $"item_id_object_{rawId}";
+            try
+            {
+                var tags = item.GetContextTags();
+                if (tags is not null && tags.Contains(expectedTag, StringComparer.OrdinalIgnoreCase))
+                    return true;
+            }
+            catch { }
         }
 
         return false;
@@ -103,9 +121,15 @@ public sealed class BundleScanner
     private List<BundleItem>  _cache    = new();
 
     private Dictionary<string, string>?                          _shopSourceCache;
-    private Dictionary<string, (int growDays, string? season, bool isGreenhouse)>? _cropInfoCache;
+    private Dictionary<string, (int growDays, string? season, bool isGreenhouse, List<string> seasons)>? _cropInfoCache;
+    // seedKey (raw) → (growDays, season, isGreenhouse, seasons, harvestQualifiedId)
+    private Dictionary<string, (int growDays, string? season, bool isGreenhouse, List<string> seasons, string harvestQualifiedId)>? _seedCache;
     // qualifiedId → true if it's a rain fish (built from Data/Fish)
     private HashSet<string>?                                     _rainFishCache;
+    // saplingKey (raw) → (productQualifiedId, productName, seasons)
+    private Dictionary<string, (string productQualifiedId, string productName, List<string> seasons)>? _fruitTreeCache;
+    // Custom Bush (furyx639.CustomBush) — sapling qualifiedId → (productQualifiedId, productName, seasons, ageToProduce)
+    private Dictionary<string, (string productQualifiedId, string productName, List<string> seasons, int ageToProduce)>? _customBushCache;
 
     public BundleScanner(IMonitor monitor, IModHelper helper)
     {
@@ -118,7 +142,7 @@ public sealed class BundleScanner
 
     public IReadOnlyList<BundleItem> GetMissingItems(bool filterConstruction = false)
     {
-        string key = $"{Game1.currentSeason}_{Game1.dayOfMonth}";
+        string key = $"{Game1.currentSeason}_{Game1.dayOfMonth}_{GetBundleCompletionHash()}";
         if (_cacheKey != key)
         {
             _cache    = BuildMissingList();
@@ -130,12 +154,140 @@ public sealed class BundleScanner
             : _cache;
     }
 
+    private static string GetBundleCompletionHash()
+    {
+        if (Game1.getLocationFromName("CommunityCenter") is not CommunityCenter cc)
+            return string.Empty;
+
+        // Tamamlanan slot sayısını hash olarak kullan
+        int completed = 0;
+        foreach (var slots in cc.bundles.Values)
+            foreach (bool slot in slots)
+                if (slot) completed++;
+
+        return completed.ToString();
+    }
+
+    // Tüm mevsimdeki ekilebilir/toplanabilir itemler — bundle'dan bağımsız
+    public IReadOnlyList<BundleItem> GetAllSeasonalItems()
+    {
+        EnsureCropInfoCache();
+        EnsureFruitTreeCache();
+        EnsureCustomBushCache();
+
+        string season  = Game1.currentSeason?.ToLower() ?? "";
+        var missing    = GetMissingItems();
+        var result     = new List<BundleItem>();
+        var seen       = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // ── Crops (Data/Crops) ──────────────────────────────────────────────
+        if (_seedCache is not null)
+        {
+            foreach (var (seedKey, info) in _seedCache)
+            {
+                // Sadece qualified key'leri işle (duplicate'leri atla)
+                if (!seedKey.StartsWith("(", StringComparison.Ordinal)) continue;
+                if (!info.isGreenhouse && !info.seasons.Contains(season)) continue;
+                if (!seen.Add(seedKey)) continue;
+
+                string itemName = GetItemName(info.harvestQualifiedId, TryGetLegacyObjectId(info.harvestQualifiedId), 0);
+                var bundleMatch = missing.FirstOrDefault(b =>
+                    string.Equals(b.QualifiedItemId, info.harvestQualifiedId, StringComparison.OrdinalIgnoreCase));
+
+                result.Add(new BundleItem
+                {
+                    QualifiedItemId = info.harvestQualifiedId,
+                    ItemId          = TryGetLegacyObjectId(info.harvestQualifiedId),
+                    ItemName        = itemName,
+                    Quantity        = 1,
+                    Quality         = 0,
+                    Season          = info.season,
+                    Seasons         = info.seasons,
+                    GrowDays        = info.growDays,
+                    IsGreenhouse    = info.isGreenhouse,
+                    BundleName      = bundleMatch?.BundleName ?? string.Empty,
+                    Category        = BundleCategory.Crop,
+                    ShopSource      = ResolveShopSource(seedKey, TryGetLegacyObjectId(seedKey)),
+                });
+            }
+        }
+
+        // ── Fruit Trees (Data/FruitTrees) ───────────────────────────────────
+        if (_fruitTreeCache is not null)
+        {
+            var processed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (saplingKey, info) in _fruitTreeCache)
+            {
+                if (!saplingKey.StartsWith("(", StringComparison.Ordinal)) continue;
+                if (info.seasons.Count > 0 && !info.seasons.Contains(season)) continue;
+                if (!processed.Add(info.productQualifiedId)) continue;
+                if (string.IsNullOrWhiteSpace(info.productQualifiedId)) continue;
+
+                var bundleMatch = missing.FirstOrDefault(b =>
+                    string.Equals(b.QualifiedItemId, info.productQualifiedId, StringComparison.OrdinalIgnoreCase));
+
+                result.Add(new BundleItem
+                {
+                    QualifiedItemId = info.productQualifiedId,
+                    ItemId          = TryGetLegacyObjectId(info.productQualifiedId),
+                    ItemName        = info.productName,
+                    Quantity        = 1,
+                    Quality         = 0,
+                    Season          = info.seasons.Count > 0 ? info.seasons[0] : null,
+                    Seasons         = info.seasons,
+                    GrowDays        = 28,
+                    IsGreenhouse    = info.seasons.Count == 0,
+                    BundleName      = bundleMatch?.BundleName ?? string.Empty,
+                    Category        = BundleCategory.Crop,
+                });
+            }
+        }
+
+        // ── Custom Bush ─────────────────────────────────────────────────────
+        if (_customBushCache is not null)
+        {
+            var processed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (saplingKey, info) in _customBushCache)
+            {
+                if (!saplingKey.StartsWith("(", StringComparison.Ordinal)) continue;
+                if (info.seasons.Count > 0 && !info.seasons.Contains(season)) continue;
+                if (!processed.Add(info.productQualifiedId)) continue;
+                if (string.IsNullOrWhiteSpace(info.productQualifiedId)) continue;
+
+                var bundleMatch = missing.FirstOrDefault(b =>
+                    string.Equals(b.QualifiedItemId, info.productQualifiedId, StringComparison.OrdinalIgnoreCase));
+
+                result.Add(new BundleItem
+                {
+                    QualifiedItemId = info.productQualifiedId,
+                    ItemId          = TryGetLegacyObjectId(info.productQualifiedId),
+                    ItemName        = info.productName,
+                    Quantity        = 1,
+                    Quality         = 0,
+                    Season          = info.seasons.Count > 0 ? info.seasons[0] : null,
+                    Seasons         = info.seasons,
+                    GrowDays        = info.ageToProduce,
+                    IsGreenhouse    = info.seasons.Count == 0,
+                    BundleName      = bundleMatch?.BundleName ?? string.Empty,
+                    Category        = BundleCategory.Crop,
+                });
+            }
+        }
+
+        return result.OrderBy(i => string.IsNullOrEmpty(i.BundleName) ? 1 : 0)
+                     .ThenBy(i => i.ItemName)
+                     .ToList();
+    }
+
     public void Invalidate()
     {
         _cacheKey        = string.Empty;
         _shopSourceCache = null;
         _cropInfoCache   = null;
+        _seedCache       = null;
         _rainFishCache   = null;
+        _fruitTreeCache  = null;
+        _customBushCache = null;
     }
 
     // ─── Main scan ────────────────────────────────────────────────────────────
@@ -150,6 +302,8 @@ public sealed class BundleScanner
         EnsureShopSourceCache();
         EnsureCropInfoCache();
         EnsureRainFishCache();
+        EnsureFruitTreeCache();
+        EnsureCustomBushCache();
 
         Dictionary<string, string> bundleData;
         try   { bundleData = _gameContent.Load<Dictionary<string, string>>("Data/Bundles"); }
@@ -210,6 +364,7 @@ public sealed class BundleScanner
                     Quantity        = qty,
                     Quality         = quality,
                     Season          = cropInfo.season,
+                    Seasons         = cropInfo.seasons,
                     GrowDays        = cropInfo.growDays,
                     IsGreenhouse    = cropInfo.isGreenhouse,
                     BundleName      = bundleName,
@@ -283,7 +438,8 @@ public sealed class BundleScanner
     private void EnsureCropInfoCache()
     {
         if (_cropInfoCache is not null) return;
-        _cropInfoCache = new Dictionary<string, (int, string?, bool)>(StringComparer.OrdinalIgnoreCase);
+        _cropInfoCache = new Dictionary<string, (int, string?, bool, List<string>)>(StringComparer.OrdinalIgnoreCase);
+        _seedCache     = new Dictionary<string, (int, string?, bool, List<string>, string)>(StringComparer.OrdinalIgnoreCase);
 
         Dictionary<string, CropData>? crops = null;
         try { crops = _gameContent.Load<Dictionary<string, CropData>>("Data/Crops"); }
@@ -298,41 +454,55 @@ public sealed class BundleScanner
                 foreach (var d in data.DaysInPhase)
                     if (d > 0) growDays += d;
 
-            // FIX 4: empty Seasons = greenhouse / all-season crop
             bool isGreenhouse = data.Seasons is null || data.Seasons.Count == 0;
-            string? season    = isGreenhouse ? null : data.Seasons![0].ToString().ToLower();
+            var seasonsList   = isGreenhouse
+                ? new List<string>()
+                : data.Seasons!.Select(s => s.ToString().ToLower()).ToList();
+            string? season    = seasonsList.Count > 0 ? seasonsList[0] : null;
 
-            // Index by qualified harvest ID — "(O)24" or "(O)MizuJakkaru.Cornucopia_Cabbage"
-            string harvestQualified = NormalizeQualifiedItemId(data.HarvestItemId);
-            if (!string.IsNullOrWhiteSpace(harvestQualified))
-                _cropInfoCache.TryAdd(harvestQualified, (growDays, season, isGreenhouse));
+            // Harvest qualified ID
+            int harvestIntId = int.TryParse(data.HarvestItemId, out int hid) ? hid : -1;
+            string harvestQualified = harvestIntId > 0
+                ? $"(O){harvestIntId}"
+                : $"(O){data.HarvestItemId}";
 
-            // Also index by raw harvest ID string (legacy int or mod string key)
-            _cropInfoCache.TryAdd(data.HarvestItemId, (growDays, season, isGreenhouse));
-
-            // For mod crops: also try resolving via ItemRegistry to get the true qualified ID
-            if (!int.TryParse(data.HarvestItemId, out _))
+            // Mod crops: resolve via ItemRegistry
+            if (harvestIntId < 0)
             {
                 try
                 {
                     var itemData = ItemRegistry.GetData($"(O){data.HarvestItemId}");
-                    if (itemData is not null)
-                        _cropInfoCache.TryAdd(itemData.QualifiedItemId, (growDays, season, isGreenhouse));
+                    if (itemData is not null) harvestQualified = itemData.QualifiedItemId;
                 }
                 catch { }
             }
+
+            var cropTuple = (growDays, season, isGreenhouse, seasonsList);
+            var seedTuple = (growDays, season, isGreenhouse, seasonsList, harvestQualified);
+
+            // Index harvest by qualified ID
+            string normalizedHarvest = harvestIntId > 0 ? $"(O){harvestIntId}" : harvestQualified;
+            _cropInfoCache.TryAdd(normalizedHarvest, cropTuple);
+            _cropInfoCache.TryAdd(data.HarvestItemId, cropTuple);
+
+            // Index seed by raw key and qualified key
+            _seedCache.TryAdd(seedKey, seedTuple);
+            if (int.TryParse(seedKey, out int seedInt))
+                _seedCache.TryAdd($"(O){seedInt}", seedTuple);
+            else
+                _seedCache.TryAdd($"(O){seedKey}", seedTuple);
         }
     }
 
-    private (int growDays, string? season, bool isGreenhouse) GetCropInfo(string qualifiedId, int legacyId)
+    private (int growDays, string? season, bool isGreenhouse, List<string> seasons) GetCropInfo(string qualifiedId, int legacyId)
     {
-        if (_cropInfoCache is null) return (0, null, false);
+        if (_cropInfoCache is null) return (0, null, false, new List<string>());
 
         if (_cropInfoCache.TryGetValue(qualifiedId, out var info)) return info;
 
         if (legacyId > 0 && _cropInfoCache.TryGetValue(legacyId.ToString(), out info)) return info;
 
-        return (0, null, false);
+        return (0, null, false, new List<string>());
     }
 
     // ─── FIX 3: Rain fish cache (reads Data/Fish) ────────────────────────────
@@ -572,46 +742,44 @@ public sealed class BundleScanner
         return localized == key ? englishName : localized;
     }
 
-    // ─── Public helper used by TooltipHelper ─────────────────────────────────
+    // ─── Public helpers used by TooltipHelper ────────────────────────────────
 
+    // Instance seed cache'ini kullanan versiyon — mod tohumları dahil tüm tohumlar
+    public (int growDays, string? season, string harvestQualifiedId, List<string> seasons) GetSeedInfo(string qualifiedSeedId)
+    {
+        if (_seedCache is null) EnsureCropInfoCache();
+
+        string rawKey = qualifiedSeedId.StartsWith("(", StringComparison.Ordinal)
+            ? qualifiedSeedId[(qualifiedSeedId.IndexOf(')') + 1)..]
+            : qualifiedSeedId;
+
+        // Seed cache'den bak
+        if (_seedCache!.TryGetValue(rawKey, out var cached))
+            return (cached.growDays, cached.season, cached.harvestQualifiedId, cached.seasons);
+        if (_seedCache.TryGetValue(qualifiedSeedId, out cached))
+            return (cached.growDays, cached.season, cached.harvestQualifiedId, cached.seasons);
+
+        // Legacy int fallback
+        if (int.TryParse(rawKey, out int seedInt))
+        {
+            if (SeedToHarvest.TryGetValue(seedInt, out int fallbackHarvest))
+            {
+                // Crop cache'den harvest bilgisini al
+                string harvestQ = $"(O){fallbackHarvest}";
+                if (_cropInfoCache?.TryGetValue(harvestQ, out var ci) == true)
+                    return (ci.growDays, ci.season, harvestQ, ci.seasons);
+                return (0, null, harvestQ, new List<string>());
+            }
+        }
+
+        return (0, null, string.Empty, new List<string>());
+    }
+
+    // Geriye dönük uyumluluk için static versiyon (int seedId)
     public static (int growDays, string? season, int harvestId) GetCropInfoFromSeed(int seedId)
     {
-        try
-        {
-            var crops = Game1.content.Load<Dictionary<string, CropData>>("Data/Crops");
-            if (crops.TryGetValue(seedId.ToString(), out var data))
-            {
-                // FIX 4: empty Seasons = greenhouse crop
-                string? season = data.Seasons?.Count > 0 ? data.Seasons[0].ToString().ToLower() : null;
-                int harvestId  = int.TryParse(data.HarvestItemId, out int hid) ? hid : -1;
-                int growDays   = 0;
-                if (data.DaysInPhase != null)
-                    foreach (var d in data.DaysInPhase)
-                        if (d > 0) growDays += d;
-                return (growDays, season, harvestId);
-            }
-        }
-        catch { }
-
-        // Legacy string format fallback
-        try
-        {
-            var crops = Game1.content.Load<Dictionary<string, string>>("Data/Crops");
-            if (crops.TryGetValue(seedId.ToString(), out string? raw))
-            {
-                string[] p = raw.Split('/');
-                if (p.Length >= 4)
-                {
-                    string season  = p[0].Split(' ')[0].ToLower();
-                    int harvestId  = int.TryParse(p[3], out int hid) ? hid : -1;
-                    int growDays   = 0;
-                    foreach (var part in p[1].Split(' '))
-                        if (int.TryParse(part, out int d) && d > 0) growDays += d;
-                    return (growDays, season, harvestId);
-                }
-            }
-        }
-        catch { }
+        var result = GetCropInfoFromSeedKey(seedId.ToString());
+        if (result.growDays > 0) return (result.growDays, result.season, result.harvestId);
 
         if (SeedToHarvest.TryGetValue(seedId, out int fallbackHarvest))
         {
@@ -634,8 +802,333 @@ public sealed class BundleScanner
         return (0, null, -1);
     }
 
-    private void LogFrameworkCompatibility()
+    // Geriye dönük uyumluluk — static qualified versiyon
+    public static (int growDays, string? season, string harvestQualifiedId) GetCropInfoFromSeedQualified(string qualifiedSeedId)
     {
+        string rawKey = qualifiedSeedId.StartsWith("(", StringComparison.Ordinal)
+            ? qualifiedSeedId[(qualifiedSeedId.IndexOf(')') + 1)..]
+            : qualifiedSeedId;
+
+        if (int.TryParse(rawKey, out int intId))
+        {
+            var (gd, s, hid) = GetCropInfoFromSeed(intId);
+            return (gd, s, hid > 0 ? $"(O){hid}" : string.Empty);
+        }
+
+        var info = GetCropInfoFromSeedKey(rawKey);
+        return (info.growDays, info.season, info.harvestId > 0 ? $"(O){info.harvestId}" : info.harvestQualifiedId);
+    }
+
+    private static (int growDays, string? season, int harvestId, string harvestQualifiedId) GetCropInfoFromSeedKey(string key)
+    {
+        try
+        {
+            var crops = Game1.content.Load<Dictionary<string, CropData>>("Data/Crops");
+            if (crops.TryGetValue(key, out var data))
+            {
+                string? season = data.Seasons?.Count > 0 ? data.Seasons[0].ToString().ToLower() : null;
+                int harvestIntId = int.TryParse(data.HarvestItemId, out int hid) ? hid : -1;
+                string harvestQualified = harvestIntId > 0
+                    ? $"(O){harvestIntId}"
+                    : !string.IsNullOrWhiteSpace(data.HarvestItemId)
+                        ? $"(O){data.HarvestItemId}"
+                        : string.Empty;
+                int growDays = 0;
+                if (data.DaysInPhase != null)
+                    foreach (var d in data.DaysInPhase)
+                        if (d > 0) growDays += d;
+                return (growDays, season, harvestIntId, harvestQualified);
+            }
+        }
+        catch { }
+
+        // Legacy string format
+        try
+        {
+            var crops = Game1.content.Load<Dictionary<string, string>>("Data/Crops");
+            if (crops.TryGetValue(key, out string? raw))
+            {
+                string[] p = raw.Split('/');
+                if (p.Length >= 4)
+                {
+                    string season  = p[0].Split(' ')[0].ToLower();
+                    int harvestId  = int.TryParse(p[3], out int hid) ? hid : -1;
+                    int growDays   = 0;
+                    foreach (var part in p[1].Split(' '))
+                        if (int.TryParse(part, out int d) && d > 0) growDays += d;
+                    return (growDays, season, harvestId, harvestId > 0 ? $"(O){harvestId}" : string.Empty);
+                }
+            }
+        }
+        catch { }
+
+        return (0, null, -1, string.Empty);
+    }
+
+    // ─── Fruit Tree cache ────────────────────────────────────────────────────
+
+    private void EnsureFruitTreeCache()
+    {
+        if (_fruitTreeCache is not null) return;
+        _fruitTreeCache = new Dictionary<string, (string, string, List<string>)>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            // Game1.content.Load kullan — mod patch'leri (CP) bu üzerinden uygulanır
+            var trees = Game1.content.Load<Dictionary<string, StardewValley.GameData.FruitTrees.FruitTreeData>>("Data/FruitTrees");
+            _monitor.Log($"[FruitTree] Data/FruitTrees yüklendi: {trees.Count} kayıt", LogLevel.Debug);
+            foreach (var (saplingKey, data) in trees)
+            {
+                if (data is null) continue;
+
+                // Ürün listesinden ilk ürünü al
+                string productQualifiedId = string.Empty;
+                string productName        = string.Empty;
+                if (data.Fruit?.Count > 0)
+                {
+                    var firstFruit = data.Fruit[0];
+                    string rawId   = firstFruit?.ItemId ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(rawId))
+                    {
+                        productQualifiedId = rawId.StartsWith("(", StringComparison.Ordinal)
+                            ? rawId : $"(O){rawId}";
+                        try
+                        {
+                            var item = ItemRegistry.Create(productQualifiedId, 1, 0, allowNull: true);
+                            productName = item?.DisplayName ?? productQualifiedId;
+                        }
+                        catch { productName = productQualifiedId; }
+                    }
+                }
+
+                // Mevsimler
+                var seasons = data.Seasons?.Select(s => s.ToString().ToLower()).ToList()
+                           ?? new List<string>();
+
+                // Sapling qualified ID — hem (O) hem (F) prefix'iyle index'le
+                // SDV 1.6'da sapling'ler (F) tipinde: (F)628, (F)629 vb.
+                bool isAlreadyQualified = saplingKey.StartsWith("(", StringComparison.Ordinal);
+                bool isInt = int.TryParse(saplingKey, out int saplingInt);
+
+                string saplingQualifiedO = isAlreadyQualified ? saplingKey
+                    : isInt ? $"(O){saplingInt}" : $"(O){saplingKey}";
+                string saplingQualifiedF = isAlreadyQualified
+                    ? System.Text.RegularExpressions.Regex.Replace(saplingKey, @"^\([^)]+\)", "(F)")
+                    : isInt ? $"(F){saplingInt}" : $"(F){saplingKey}";
+
+                var entry = (productQualifiedId, productName, seasons);
+                _fruitTreeCache.TryAdd(saplingKey, entry);
+                _fruitTreeCache.TryAdd(saplingQualifiedO, entry);
+                _fruitTreeCache.TryAdd(saplingQualifiedF, entry);
+
+                _monitor.Log($"[FruitTree] Cache: {saplingKey} / {saplingQualifiedF} → {productName} [{string.Join(",", seasons)}]", LogLevel.Trace);
+            }
+            _monitor.Log($"[FruitTree] Cache dolduruldu: {_fruitTreeCache.Count} giriş ({trees.Count} ağaç)", LogLevel.Trace);
+        }
+        catch (Exception ex)
+        {
+            _monitor.Log($"[BundleScanner] Data/FruitTrees yüklenemedi: {ex.Message}", LogLevel.Warn);
+        }
+    }
+
+    // Fidan bilgisi — TooltipHelper tarafından kullanılır
+    public (string productQualifiedId, string productName, List<string> seasons) GetFruitTreeInfo(string qualifiedSaplingId)
+    {
+        EnsureFruitTreeCache();
+        if (_fruitTreeCache is null) return (string.Empty, string.Empty, new List<string>());
+
+        if (_fruitTreeCache.TryGetValue(qualifiedSaplingId, out var info)) return info;
+
+        // Prefix'i strip et — "(F)628" → "628"
+        string rawKey = qualifiedSaplingId.StartsWith("(", StringComparison.Ordinal)
+            ? qualifiedSaplingId[(qualifiedSaplingId.IndexOf(')') + 1)..]
+            : qualifiedSaplingId;
+        if (_fruitTreeCache.TryGetValue(rawKey, out info)) return info;
+
+        // Cache'de yoksa Data/FruitTrees'den direkt ara (mod ağaçları için)
+        try
+        {
+            var trees = Game1.content.Load<Dictionary<string, StardewValley.GameData.FruitTrees.FruitTreeData>>("Data/FruitTrees");
+            if (trees.TryGetValue(rawKey, out var data) && data is not null)
+            {
+                string productQualifiedId = string.Empty;
+                string productName        = string.Empty;
+                if (data.Fruit?.Count > 0)
+                {
+                    string rawId = data.Fruit[0]?.ItemId ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(rawId))
+                    {
+                        productQualifiedId = rawId.StartsWith("(", StringComparison.Ordinal) ? rawId : $"(O){rawId}";
+                        try
+                        {
+                            var item = ItemRegistry.Create(productQualifiedId, 1, 0, allowNull: true);
+                            productName = item?.DisplayName ?? productQualifiedId;
+                        }
+                        catch { productName = productQualifiedId; }
+                    }
+                }
+                var seasons = data.Seasons?.Select(s => s.ToString().ToLower()).ToList() ?? new List<string>();
+                var entry = (productQualifiedId, productName, seasons);
+                // Cache'e ekle
+                _fruitTreeCache.TryAdd(qualifiedSaplingId, entry);
+                _fruitTreeCache.TryAdd(rawKey, entry);
+                return entry;
+            }
+        }
+        catch { }
+
+        return (string.Empty, string.Empty, new List<string>());
+    }
+
+    // Fidan mı? — TooltipHelper tarafından kullanılır
+    public bool IsFruitTreeSapling(string qualifiedId)
+    {
+        if (string.IsNullOrWhiteSpace(qualifiedId)) return false;
+        EnsureFruitTreeCache();
+        if (_fruitTreeCache is null) return false;
+
+        if (_fruitTreeCache.ContainsKey(qualifiedId)) return true;
+
+        // Prefix'i strip et — "(F)628" → "628", "(O)628" → "628"
+        string rawKey = qualifiedId.StartsWith("(", StringComparison.Ordinal)
+            ? qualifiedId[(qualifiedId.IndexOf(')') + 1)..]
+            : qualifiedId;
+
+        return _fruitTreeCache.ContainsKey(rawKey);
+    }
+
+    // ─── Custom Bush cache ───────────────────────────────────────────────────
+
+    private void EnsureCustomBushCache()
+    {
+        if (_customBushCache is not null) return;
+        _customBushCache = new Dictionary<string, (string, string, List<string>, int)>(StringComparer.OrdinalIgnoreCase);
+
+        if (!_modRegistry.IsLoaded("furyx639.CustomBush")) return;
+
+        try
+        {
+            // CustomBushData tipini reflection ile yükle
+            var customBushAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == "CustomBush");
+            if (customBushAssembly is null)
+            {
+                _monitor.Log("[CustomBush] Assembly bulunamadı", LogLevel.Trace);
+                return;
+            }
+
+            var customBushDataType = customBushAssembly.GetType("LeFauxMods.CustomBush.Models.CustomBushData");
+            if (customBushDataType is null)
+            {
+                _monitor.Log("[CustomBush] CustomBushData tipi bulunamadı", LogLevel.Trace);
+                return;
+            }
+
+            // Dictionary<string, CustomBushData> tipini oluştur
+            var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(string), customBushDataType);
+
+            // IGameContentHelper.Load<T> metodunu reflection ile çağır
+            var loadMethod = _gameContent.GetType()
+                .GetMethods()
+                .FirstOrDefault(m => m.Name == "Load" && m.IsGenericMethod && m.GetParameters().Length == 1)
+                ?.MakeGenericMethod(dictType);
+
+            var rawData = loadMethod?.Invoke(_gameContent, new object[] { "furyx639.CustomBush/Data" }) as System.Collections.IDictionary;
+            if (rawData is null) return;
+
+            var ageField     = customBushDataType.GetProperty("AgeToProduce") ?? (System.Reflection.MemberInfo?)customBushDataType.GetField("AgeToProduce");
+            var seasonsField  = customBushDataType.GetProperty("Seasons")      ?? (System.Reflection.MemberInfo?)customBushDataType.GetField("Seasons");
+            var producedField = customBushDataType.GetProperty("ItemsProduced") ?? (System.Reflection.MemberInfo?)customBushDataType.GetField("ItemsProduced");
+
+            foreach (System.Collections.DictionaryEntry kv in rawData)
+            {
+                string saplingQualifiedId = kv.Key?.ToString() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(saplingQualifiedId) || kv.Value is null) continue;
+
+                object entry = kv.Value;
+
+                int ageToProduce = GetReflectionInt(entry, ageField);
+
+                var seasons = new List<string>();
+                object? seasonsObj = GetReflectionValue(entry, seasonsField);
+                if (seasonsObj is System.Collections.IEnumerable seasonsEnum)
+                    foreach (var s in seasonsEnum)
+                        if (s?.ToString() is string sv && sv.Length > 0)
+                            seasons.Add(sv.ToLower());
+
+                string productQualifiedId = string.Empty;
+                string productName        = string.Empty;
+                object? producedObj = GetReflectionValue(entry, producedField);
+                if (producedObj is System.Collections.IList producedList && producedList.Count > 0)
+                {
+                    var firstItem = producedList[0];
+                    if (firstItem is not null)
+                    {
+                        var itemIdProp = firstItem.GetType().GetProperty("ItemId") ?? (System.Reflection.MemberInfo?)firstItem.GetType().GetField("ItemId");
+                        string rawId = GetReflectionValue(firstItem, itemIdProp)?.ToString() ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(rawId))
+                        {
+                            productQualifiedId = rawId.StartsWith("(", StringComparison.Ordinal) ? rawId : $"(O){rawId}";
+                            try
+                            {
+                                var item = ItemRegistry.Create(productQualifiedId, 1, 0, allowNull: true);
+                                productName = item?.DisplayName ?? productQualifiedId;
+                            }
+                            catch { productName = productQualifiedId; }
+                        }
+                    }
+                }
+
+                var bushEntry = (productQualifiedId, productName, seasons, ageToProduce);
+                _customBushCache.TryAdd(saplingQualifiedId, bushEntry);
+                string rawKey = saplingQualifiedId.StartsWith("(", StringComparison.Ordinal)
+                    ? saplingQualifiedId[(saplingQualifiedId.IndexOf(')') + 1)..] : saplingQualifiedId;
+                _customBushCache.TryAdd(rawKey, bushEntry);
+            }
+            _monitor.Log($"[CustomBush] Cache dolduruldu: {_customBushCache.Count / 2} bush", LogLevel.Debug);
+        }
+        catch (Exception ex)
+        {
+            _monitor.Log($"[BundleScanner] CustomBush cache hatası: {ex.Message}", LogLevel.Trace);
+        }
+    }
+
+    private static object? GetReflectionValue(object obj, System.Reflection.MemberInfo? member) => member switch
+    {
+        System.Reflection.PropertyInfo p => p.GetValue(obj),
+        System.Reflection.FieldInfo f    => f.GetValue(obj),
+        _                                => null,
+    };
+
+    private static int GetReflectionInt(object obj, System.Reflection.MemberInfo? member)
+    {
+        var val = GetReflectionValue(obj, member);
+        return val is int i ? i : val is long l ? (int)l : 0;
+    }
+
+    public bool IsCustomBushSapling(string qualifiedId)
+    {
+        if (string.IsNullOrWhiteSpace(qualifiedId)) return false;
+        EnsureCustomBushCache();
+        if (_customBushCache is null) return false;
+        if (_customBushCache.ContainsKey(qualifiedId)) return true;
+        string rawKey = qualifiedId.StartsWith("(", StringComparison.Ordinal)
+            ? qualifiedId[(qualifiedId.IndexOf(')') + 1)..] : qualifiedId;
+        return _customBushCache.ContainsKey(rawKey);
+    }
+
+    public (string productQualifiedId, string productName, List<string> seasons, int ageToProduce) GetCustomBushInfo(string qualifiedId)
+    {
+        EnsureCustomBushCache();
+        if (_customBushCache is null) return (string.Empty, string.Empty, new List<string>(), 0);
+        if (_customBushCache.TryGetValue(qualifiedId, out var info)) return info;
+        string rawKey = qualifiedId.StartsWith("(", StringComparison.Ordinal)
+            ? qualifiedId[(qualifiedId.IndexOf(')') + 1)..] : qualifiedId;
+        if (_customBushCache.TryGetValue(rawKey, out info)) return info;
+        return (string.Empty, string.Empty, new List<string>(), 0);
+    }
+
+    private void LogFrameworkCompatibility()    {
         string[] knownFrameworks =
         {
             "spacechase0.SpaceCore",

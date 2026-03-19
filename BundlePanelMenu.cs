@@ -18,7 +18,7 @@ public sealed class BundlePanelMenu : IClickableMenu
     private const int BaseHeadH = 160;
     private const int BaseFootH = 36;
     private const int BaseTabColW = 130;
-    private const int BaseCalColW = 160;
+    private const int BaseCalColW = 220;
     private const int BaseSbW     = 12;
     private const int BasePad     = 14;
     private const int BaseTabH    = 52;
@@ -61,13 +61,16 @@ public sealed class BundlePanelMenu : IClickableMenu
         null, BundleCategory.Crop, BundleCategory.Fish,
         BundleCategory.Artisan, BundleCategory.Forage,
         BundleCategory.Construction, BundleCategory.Other,
+        null, // index 7 = Sezon sekmesi (özel)
     };
     private static string TabLabel(int i) => i switch
     {
         0 => I18n.TabAll(), 1 => I18n.TabCrop(), 2 => I18n.TabFish(),
         3 => I18n.TabArtisan(), 4 => I18n.TabForage(),
-        5 => I18n.TabConstruction(), _ => I18n.TabOther(),
+        5 => I18n.TabConstruction(), 6 => I18n.TabOther(),
+        _ => I18n.TabSeasonal(),
     };
+    private const int SeasonTab = 7;
     private static Color CatColor(BundleCategory? c) => c switch
     {
         BundleCategory.Crop         => CGreen,
@@ -85,18 +88,24 @@ public sealed class BundlePanelMenu : IClickableMenu
     private ChipFilter _chipFilter = ChipFilter.None;
 
     private int      _tab, _scroll;
-    private int      _hoverTab = -1, _hoverCard = -1, _hoverSort = -1, _hoverChip = -1;
+    private int      _hoverTab = -1, _hoverCard = -1, _hoverSort = -1, _hoverChip = -1, _hoverCalDay = -1;
+    private Rectangle[] _calCellRects = new Rectangle[29]; // 1-indexed
     private bool     _drag;
     private int      _dragY0, _dragScr0;
     private bool     _dragPanel;
     private int      _dragPanelX0, _dragPanelY0, _dragMouseX0, _dragMouseY0;
     private SortMode _sort = SortMode.Urgency;
 
+    private string _searchText = string.Empty;
+    private bool   _searchFocused;
+    private Rectangle _searchRect;
+
     private readonly IReadOnlyList<BundleItem> _all;
     private readonly ModConfig?                _config;
     private readonly HashSet<string>           _planned = new();
-    private readonly HashSet<string>           _completedPlanned = new(); // planlandı + tamamlandı
+    private readonly HashSet<string>           _completedPlanned = new();
     private List<BundleItem>                   _vis     = new();
+    private IReadOnlyList<BundleItem>          _allSeasonal = Array.Empty<BundleItem>();
 
     private int _px, _py;
     private int _barY, _chipY, _sortY;
@@ -249,12 +258,29 @@ public sealed class BundlePanelMenu : IClickableMenu
             new Rectangle(337, 494, 12, 12),
             4f);
 
+        // Sezon sekmesi için tüm mevsimdeki itemleri yükle
+        _allSeasonal = ModEntry.Instance?.Scanner?.GetAllSeasonalItems()
+                    ?? Array.Empty<BundleItem>();
+
         Refresh();
     }
 
     private void Refresh()
     {
         _scroll = 0;
+
+        // Sezon sekmesi ayrı liste kullanır
+        if (_tab == SeasonTab)
+        {
+            _vis = _allSeasonal.OrderBy(i => string.IsNullOrEmpty(i.BundleName) ? 1 : 0)
+                               .ThenBy(i => i.ItemName).ToList();
+            string curSeason = Game1.currentSeason?.ToLower() ?? "";
+            int curDay       = Game1.dayOfMonth;
+            _urgentCount  = _all.Count(i => i.GrowDays > 0 && i.Season == curSeason && (28 - i.GrowDays) - curDay <= 5);
+            _seasonCount  = _allSeasonal.Count;
+            return;
+        }
+
         var cat = TabCats[_tab];
         var src = cat is null ? _all : _all.Where(i => i.Category == cat);
 
@@ -267,6 +293,13 @@ public sealed class BundlePanelMenu : IClickableMenu
             ChipFilter.Planned  => src.Where(i => _planned.Contains(PlanKey(i))),
             _                   => src,
         };
+
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            string q = _searchText.Trim().ToLower();
+            src = src.Where(i => i.ItemName.ToLower().Contains(q)
+                              || i.BundleName.ToLower().Contains(q));
+        }
 
         _vis = _sort switch
         {
@@ -347,6 +380,27 @@ public sealed class BundlePanelMenu : IClickableMenu
         int cw2 = DrawChip(b, cx, _chipY, $"{_seasonCount} {I18n.ChipSeasonal()}",  CGold,   _chipFilter == ChipFilter.Seasonal, _hoverChip == 2); _chipRects[2] = new Rectangle(cx, _chipY, cw2, ChipH); cx += cw2 + 8;
         int cw3 = DrawChip(b, cx, _chipY, $"{_planned.Count} {I18n.ChipPlanned()}", CPlanned,_chipFilter == ChipFilter.Planned,  _hoverChip == 3); _chipRects[3] = new Rectangle(cx, _chipY, cw3, ChipH);
 
+        // Arama kutusu — chip satırının sağ tarafına hizalı
+        int sbW = Math.Min(160, (int)(160 * _scale));
+        int sbH = ChipH;
+        int sbX = barX + barW - sbW;
+        int sbY = _chipY;
+        _searchRect = new Rectangle(sbX, sbY, sbW, sbH);
+
+        Color searchBg  = _searchFocused ? new Color(255, 252, 235) : new Color(240, 228, 200);
+        Color searchBrd = _searchFocused ? CInk * 0.80f : CDiv * 0.60f;
+        b.Draw(Game1.staminaRect, _searchRect, searchBg);
+        DrawRect(b, sbX, sbY, sbW, sbH, searchBrd);
+
+        string searchDisplay = string.IsNullOrEmpty(_searchText)
+            ? (_searchFocused ? "|" : I18n.SearchPlaceholder())
+            : (_searchFocused ? _searchText + "|" : _searchText);
+        Color searchTextColor = string.IsNullOrEmpty(_searchText) && !_searchFocused ? CSub * 0.50f : CInk;
+        Vector2 stv = Game1.dialogueFont.MeasureString(searchDisplay) * FMid;
+        b.DrawString(Game1.dialogueFont, searchDisplay,
+            new Vector2(sbX + 8, sbY + (sbH - stv.Y) / 2f),
+            searchTextColor, 0f, Vector2.Zero, FMid, SpriteEffects.None, 0f);
+
         b.Draw(Game1.staminaRect,
             new Rectangle(_px + Pad, _py + 100, PW - Pad * 2, 1), CDiv * 0.40f);
 
@@ -417,7 +471,8 @@ public sealed class BundlePanelMenu : IClickableMenu
                 new Vector2(_tcX + 12, ty + (TabH - ls.Y) / 2f),
                 sel ? CInk : CSub, 0f, Vector2.Zero, FMid, SpriteEffects.None, 0f);
 
-            int cnt = TabCats[i] is null ? _all.Count : _all.Count(x => x.Category == TabCats[i]);
+            int cnt = i == SeasonTab ? _allSeasonal.Count
+                    : TabCats[i] is null ? _all.Count : _all.Count(x => x.Category == TabCats[i]);
             string cs = cnt.ToString();
             Vector2 cv = Game1.dialogueFont.MeasureString(cs) * FTiny;
             int bx = _tcX + _tcW - (int)cv.X - 8;
@@ -444,61 +499,139 @@ public sealed class BundlePanelMenu : IClickableMenu
             new Rectangle(_caX, _caY, _caW, _caH), new Color(200, 174, 132) * 0.14f);
         DrawRect(b, _caX, _caY, _caW, _caH, CDiv * 0.30f);
 
+        // Başlık
         string calTitle = CapFirst(season);
         Vector2 ct = Game1.dialogueFont.MeasureString(calTitle) * FSmall;
         b.DrawString(Game1.dialogueFont, calTitle,
-            new Vector2(_caX + (_caW - ct.X) / 2f, _caY + 5),
+            new Vector2(_caX + (_caW - ct.X) / 2f, _caY + 4),
             CInk, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
 
-        var critDays = new Dictionary<int, Color>();
-        foreach (var item in _all.Where(i => i.Season == season && i.GrowDays > 0))
+        // Son ekim günleri: gün → (renk, item listesi)
+        var critDays = new Dictionary<int, (Color color, List<string> items)>();
+        foreach (var item in _all.Where(i => i.GrowDays > 0
+            && (i.Season == season || (i.IsGreenhouse && i.GrowDays > 0))))
         {
-            int ld = 28 - item.GrowDays; if (ld < 1) continue;
+            int ld = 28 - item.GrowDays;
+            if (ld < 1) continue;
             int dl = ld - today;
-            Color c = dl <= 3 ? CUrgent : dl <= 7 ? CWarn : CGold;
-            if (!critDays.ContainsKey(ld) || c == CUrgent) critDays[ld] = c;
+            Color c = dl <= 0 ? CUrgent : dl <= 3 ? CUrgent : dl <= 7 ? CWarn : CGold;
+            if (!critDays.ContainsKey(ld))
+                critDays[ld] = (c, new List<string>());
+            // En kötü rengi koru
+            var cur = critDays[ld];
+            if (c == CUrgent) critDays[ld] = (CUrgent, cur.items);
+            else if (c == CWarn && cur.color == CGold) critDays[ld] = (CWarn, cur.items);
+            critDays[ld].items.Add(item.ItemName);
         }
 
-        int legendH = 52;
-        int gridTop = _caY + (int)ct.Y + 10;
-        int gridH   = _caH - (int)ct.Y - 10 - legendH;
-        int cellW   = _caW / 4;
-        int cellH   = Math.Max(1, gridH / 7);
+        int legendH = 48;
+        int dayHeaderH = (int)(Game1.dialogueFont.MeasureString("A").Y * FTiny) + 2;
+        int weekHeaderH = dayHeaderH + 2;
+        int gridTop = _caY + (int)ct.Y + 8 + weekHeaderH;
+        int gridH   = _caH - (int)ct.Y - 8 - weekHeaderH - legendH;
+        int cellW   = _caW / 7;
+        int cellH   = Math.Max(1, gridH / 4);
 
+        // Haftanın günleri başlığı
+        string[] dayNames = { "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz" };
+        for (int d = 0; d < 7; d++)
+        {
+            int dx = _caX + d * cellW;
+            Vector2 dnv = Game1.dialogueFont.MeasureString(dayNames[d]) * FTiny;
+            b.DrawString(Game1.dialogueFont, dayNames[d],
+                new Vector2(dx + (cellW - dnv.X) / 2f, _caY + (int)ct.Y + 6),
+                CSub * 0.70f, 0f, Vector2.Zero, FTiny, SpriteEffects.None, 0f);
+        }
+
+        // Ayırıcı çizgi
+        b.Draw(Game1.staminaRect,
+            new Rectangle(_caX + 2, gridTop - 2, _caW - 4, 1), CDiv * 0.40f);
+
+        // Günler — 7 sütun x 4 satır
         for (int day = 1; day <= 28; day++)
         {
-            int col = (day - 1) % 4, row = (day - 1) / 4;
-            int dx = _caX + col * cellW, dy = gridTop + row * cellH;
-            bool isToday = day == today, isCrit = critDays.ContainsKey(day), isPast = day < today;
+            int col = (day - 1) % 7, row = (day - 1) / 7;
+            int dx = _caX + col * cellW;
+            int dy = gridTop + row * cellH;
+            bool isToday = day == today;
+            bool isCrit  = critDays.ContainsKey(day);
+            bool isPast  = day < today;
+            bool isHover = day == _hoverCalDay;
 
+            _calCellRects[day] = new Rectangle(dx, dy, cellW, cellH);
+
+            // Hücre arka planı
             if (isToday)
-                b.Draw(Game1.staminaRect, new Rectangle(dx+1,dy+1,cellW-2,cellH-2), CGold*0.28f);
-            else if (isCrit)
-                b.Draw(Game1.staminaRect, new Rectangle(dx+1,dy+1,cellW-2,cellH-2), critDays[day]*0.14f);
+                b.Draw(Game1.staminaRect, new Rectangle(dx+1,dy+1,cellW-2,cellH-2), CGold * 0.30f);
+            else if (isHover)
+                b.Draw(Game1.staminaRect, new Rectangle(dx+1,dy+1,cellW-2,cellH-2), CDiv * 0.35f);
+            else if (isCrit && !isPast)
+                b.Draw(Game1.staminaRect, new Rectangle(dx+1,dy+1,cellW-2,cellH-2), critDays[day].color * 0.12f);
 
+            // Gün numarası
             string ds = day.ToString();
             Vector2 dv = Game1.dialogueFont.MeasureString(ds) * FTiny;
-            Color dc = isToday ? CGold : isCrit ? critDays[day] : isPast ? CSub*0.28f : CSub;
+            Color dc = isToday ? CGold
+                     : isCrit && !isPast ? critDays[day].color
+                     : isPast ? CSub * 0.30f
+                     : CSub;
             b.DrawString(Game1.dialogueFont, ds,
-                new Vector2(dx + (cellW - dv.X)/2f, dy + (cellH - dv.Y)/2f),
+                new Vector2(dx + (cellW - dv.X) / 2f, dy + 2),
                 dc, 0f, Vector2.Zero, FTiny, SpriteEffects.None, 0f);
 
-            if (isCrit && !isToday)
-                b.Draw(Game1.staminaRect, new Rectangle(dx+cellW/2-2, dy+cellH-3, 4, 3), critDays[day]);
+            // Item sayısı badge — kritik günlerde
+            if (isCrit && !isPast)
+            {
+                int count = critDays[day].items.Count;
+                string badge = count.ToString();
+                Vector2 bv = Game1.dialogueFont.MeasureString(badge) * FTiny;
+                int bx = dx + cellW - (int)bv.X - 3;
+                int by = dy + cellH - (int)bv.Y - 1;
+                b.Draw(Game1.staminaRect,
+                    new Rectangle(bx - 2, by - 1, (int)bv.X + 4, (int)bv.Y + 2),
+                    critDays[day].color * 0.80f);
+                b.DrawString(Game1.dialogueFont, badge,
+                    new Vector2(bx, by),
+                    Color.White, 0f, Vector2.Zero, FTiny, SpriteEffects.None, 0f);
+            }
+
+            // Bugün çerçevesi
             if (isToday)
-                DrawRect(b, dx+1, dy+1, cellW-2, cellH-2, CGold*0.82f);
-            b.Draw(Game1.staminaRect, new Rectangle(dx, dy+cellH-1, cellW, 1), CDiv*0.08f);
+                DrawRect(b, dx+1, dy+1, cellW-2, cellH-2, CGold * 0.90f);
+
+            // Alt çizgi
+            b.Draw(Game1.staminaRect, new Rectangle(dx, dy+cellH-1, cellW, 1), CDiv * 0.10f);
+            // Sağ çizgi
+            if (col < 6)
+                b.Draw(Game1.staminaRect, new Rectangle(dx+cellW-1, dy, 1, cellH), CDiv * 0.10f);
         }
 
+        // Legend
         int ly = _caY + _caH - legendH + 4;
-        DrawLegendDot(b, _caX+6, ly,    CUrgent, I18n.CalLegendUrgent());
-        DrawLegendDot(b, _caX+6, ly+17, CWarn,   I18n.CalLegendSoon());
-        DrawLegendDot(b, _caX+6, ly+34, CGold,   I18n.CalLegendLater());
+        DrawLegendDot(b, _caX+4, ly,    CUrgent, I18n.CalLegendUrgent());
+        DrawLegendDot(b, _caX+4, ly+16, CWarn,   I18n.CalLegendSoon());
+        DrawLegendDot(b, _caX+4, ly+32, CGold,   I18n.CalLegendLater());
     }
 
     private void DrawLegendDot(SpriteBatch b, int x, int y, Color col, string label)
     {
         b.Draw(Game1.staminaRect, new Rectangle(x, y+3, 8, 8), col*0.70f);
+
+        // Metni takvim sütununun sağ kenarında kes
+        int maxTextW = _caX + _caW - (x + 12) - 2;
+        if (maxTextW <= 0) return;
+
+        Vector2 tv = Game1.dialogueFont.MeasureString(label) * FTiny;
+        if (tv.X * FTiny > maxTextW)
+        {
+            // Sığacak kadar karakter göster
+            string trimmed = label;
+            while (trimmed.Length > 1 &&
+                   Game1.dialogueFont.MeasureString(trimmed + "…").X * FTiny > maxTextW)
+                trimmed = trimmed[..^1];
+            label = trimmed + "…";
+        }
+
         b.DrawString(Game1.dialogueFont, label,
             new Vector2(x+12, y), CSub, 0f, Vector2.Zero, FTiny, SpriteEffects.None, 0f);
     }
@@ -556,9 +689,14 @@ public sealed class BundlePanelMenu : IClickableMenu
 
             try
             {
-                new StardewValley.Object(item.ItemId.ToString(), 1)
-                    .drawInMenu(b, new Vector2(_lX+8, cardY+(CardH-IconSz)/2f),
-                        IconSz/64f, 1f, 1f, StackDrawType.Hide, Color.White, false);
+                // Mod itemleri için ItemRegistry kullan, vanilla için legacy fallback
+                Item? iconItem = null;
+                try { iconItem = ItemRegistry.Create(item.QualifiedItemId, 1, item.Quality, allowNull: true); }
+                catch { }
+                if (iconItem is null && item.ItemId > 0)
+                    iconItem = new StardewValley.Object(item.ItemId.ToString(), 1);
+                iconItem?.drawInMenu(b, new Vector2(_lX+8, cardY+(CardH-IconSz)/2f),
+                    IconSz/64f, 1f, 1f, StackDrawType.Hide, Color.White, false);
             }
             catch { }
 
@@ -694,6 +832,13 @@ public sealed class BundlePanelMenu : IClickableMenu
 
     private void DrawHoverTooltip(SpriteBatch b)
     {
+        // Takvim günü tooltip'i
+        if (_hoverCalDay >= 1 && _hoverCalDay <= 28)
+        {
+            DrawCalDayTooltip(b, _hoverCalDay);
+            return;
+        }
+
         if (_hoverCard < 0 || _hoverCard >= _vis.Count) return;
         var item = _vis[_hoverCard];
 
@@ -724,6 +869,21 @@ public sealed class BundlePanelMenu : IClickableMenu
         if (item.ShopSource != null) lines.Add(($"{I18n.InfoShop()}: {item.ShopSource}", CSub));
         if (_planned.Contains(PlanKey(item))) lines.Add((I18n.InfoPlanned(), CPlanned));
 
+        // Mod item kaynağı — qualified ID'de mod prefix varsa göster
+        if (!string.IsNullOrWhiteSpace(item.QualifiedItemId))
+        {
+            string rawId = item.QualifiedItemId.StartsWith("(", StringComparison.Ordinal)
+                ? item.QualifiedItemId[(item.QualifiedItemId.IndexOf(')') + 1)..]
+                : item.QualifiedItemId;
+            if (!int.TryParse(rawId, out _))
+            {
+                // Mod item — ID'den mod adını çıkar (ilk nokta öncesi)
+                int dotIdx = rawId.IndexOf('.');
+                string modPrefix = dotIdx > 0 ? rawId[..dotIdx] : rawId;
+                lines.Add(($"Mod: {modPrefix}", new Color(120, 80, 160)));
+            }
+        }
+
         const float S = 0.50f;
         float maxW  = lines.Max(l => Game1.dialogueFont.MeasureString(l.text).X * S);
         float lineH = Game1.dialogueFont.MeasureString("A").Y * S + 4f;
@@ -742,6 +902,64 @@ public sealed class BundlePanelMenu : IClickableMenu
                 lines[i].col, 0f, Vector2.Zero, S, SpriteEffects.None, 0f);
     }
 
+    private void DrawCalDayTooltip(SpriteBatch b, int day)
+    {
+        string season = Game1.currentSeason?.ToLower() ?? "";
+        int today     = Game1.dayOfMonth;
+        int dl        = day - today;
+
+        // O güne ait son ekim itemleri
+        var items = _all.Where(i => i.GrowDays > 0
+            && (i.Season == season || i.IsGreenhouse)
+            && (28 - i.GrowDays) == day).ToList();
+
+        if (items.Count == 0 && day != today) return;
+
+        var lines = new List<(string text, Color col)>();
+
+        // Başlık: gün numarası
+        string dayLabel = day == today ? $"Gün {day}  ◀ BUGÜN" : $"Gün {day}";
+        lines.Add((dayLabel, day == today ? CGold : CInk));
+
+        if (dl < 0)
+            lines.Add(($"({-dl} gün önce)", CSub * 0.60f));
+        else if (dl == 0)
+            lines.Add(("Bugün!", CGold));
+        else
+            lines.Add(($"{dl} gün sonra", CSub));
+
+        if (items.Count > 0)
+        {
+            lines.Add(("- - - - - - - - -", CDiv));
+            lines.Add(("Son ekim günü:", CSub));
+            foreach (var item in items.Take(8))
+            {
+                int ddl = day - today;
+                Color ic = ddl <= 0 ? CUrgent : ddl <= 3 ? CUrgent : ddl <= 7 ? CWarn : CGold;
+                lines.Add(($"  • {item.ItemName}  ({item.BundleName})", ic));
+            }
+            if (items.Count > 8)
+                lines.Add(($"  + {items.Count - 8} daha...", CSub * 0.70f));
+        }
+
+        const float S = 0.50f;
+        float maxW  = lines.Max(l => Game1.dialogueFont.MeasureString(l.text).X * S);
+        float lineH = Game1.dialogueFont.MeasureString("A").Y * S + 4f;
+        int tw = (int)maxW + 24, th = (int)(lines.Count * lineH) + 20;
+
+        int mx = Game1.getMouseX(), my = Game1.getMouseY();
+        int tx = mx - tw - 16; if (tx < 4) tx = mx + 20;
+        int ty = Math.Clamp(my - th / 2, 4, Game1.uiViewport.Height - th - 4);
+
+        b.Draw(Game1.staminaRect, new Rectangle(tx+3, ty+3, tw, th), Color.Black*0.26f);
+        b.Draw(Game1.staminaRect, new Rectangle(tx, ty, tw, th), new Color(252, 244, 224));
+        DrawRect(b, tx, ty, tw, th, CDiv);
+        for (int i = 0; i < lines.Count; i++)
+            b.DrawString(Game1.dialogueFont, lines[i].text,
+                new Vector2(tx+12, ty+10+i*lineH),
+                lines[i].col, 0f, Vector2.Zero, S, SpriteEffects.None, 0f);
+    }
+
 
 
     public override void receiveScrollWheelAction(int direction)
@@ -749,6 +967,24 @@ public sealed class BundlePanelMenu : IClickableMenu
 
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
+        // Close button her şeyden önce kontrol edilmeli
+        if (upperRightCloseButton is not null && upperRightCloseButton.containsPoint(x, y))
+        {
+            exitThisMenu();
+            return;
+        }
+
+        // Arama kutusuna tıklama
+        if (_searchRect.Contains(x, y))
+        {
+            _searchFocused = true;
+            Game1.playSound("smallSelect");
+            return;
+        }
+        else
+        {
+            _searchFocused = false;
+        }
 
         ChipFilter[] filters = { ChipFilter.None, ChipFilter.Urgent, ChipFilter.Seasonal, ChipFilter.Planned };
         for (int i = 0; i < _chipRects.Length; i++)
@@ -844,7 +1080,7 @@ public sealed class BundlePanelMenu : IClickableMenu
 
     public override void performHoverAction(int x, int y)
     {
-        _hoverTab=-1; _hoverCard=-1; _hoverSort=-1; _hoverChip=-1;
+        _hoverTab=-1; _hoverCard=-1; _hoverSort=-1; _hoverChip=-1; _hoverCalDay=-1;
         for (int i = 0; i < _chipRects.Length; i++)
             if (_chipRects[i].Contains(x, y)) { _hoverChip = i; break; }
         for (int i = 0; i < 3; i++)
@@ -861,6 +1097,11 @@ public sealed class BundlePanelMenu : IClickableMenu
         {
             int idx = (y-_lY)/CardH + _scroll;
             if (idx>=0 && idx<_vis.Count) _hoverCard=idx;
+        }
+        if (CalColW > 0)
+        {
+            for (int day = 1; day <= 28; day++)
+                if (_calCellRects[day].Contains(x, y)) { _hoverCalDay = day; break; }
         }
 
         bool inHeader = x >= _px && x <= _px+PW && y >= _py && y <= _py+HeadH;
@@ -891,8 +1132,56 @@ public sealed class BundlePanelMenu : IClickableMenu
     public override void receiveRightClick(int x, int y, bool playSound = true) => exitThisMenu();
     public override void receiveKeyPress(Keys key)
     {
+        if (_searchFocused)
+        {
+            if (key == Keys.Escape)
+            {
+                if (!string.IsNullOrEmpty(_searchText))
+                {
+                    _searchText = string.Empty;
+                    Refresh();
+                }
+                else
+                {
+                    _searchFocused = false;
+                }
+                return;
+            }
+            if (key == Keys.Back)
+            {
+                if (_searchText.Length > 0)
+                {
+                    _searchText = _searchText[..^1];
+                    Refresh();
+                }
+                return;
+            }
+
+            // Karakter girişi — Keys enum'dan char'a çevir
+            char? c = KeyToChar(key);
+            if (c.HasValue && _searchText.Length < 30)
+            {
+                _searchText += c.Value;
+                Refresh();
+            }
+            return;
+        }
+
         if (key == Keys.Escape) exitThisMenu();
         base.receiveKeyPress(key);
+    }
+
+    private static char? KeyToChar(Keys key)
+    {
+        bool shift = Keyboard.GetState().IsKeyDown(Keys.LeftShift)
+                  || Keyboard.GetState().IsKeyDown(Keys.RightShift);
+
+        if (key >= Keys.A && key <= Keys.Z)
+            return shift ? (char)('A' + (key - Keys.A)) : (char)('a' + (key - Keys.A));
+        if (key >= Keys.D0 && key <= Keys.D9)
+            return (char)('0' + (key - Keys.D0));
+        if (key == Keys.Space) return ' ';
+        return null;
     }
 
 

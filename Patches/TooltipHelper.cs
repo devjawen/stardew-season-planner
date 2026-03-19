@@ -37,26 +37,101 @@ internal static class TooltipHelper
         int vanillaTooltipWidth = 0)
     {
         if (!config.ShowInventoryTooltips) return;
-        if (hovered is not StardewValley.Object obj) return;
+        if (hovered is null) return;
 
-        int itemId = obj.ParentSheetIndex;
+        string qualifiedId = hovered.QualifiedItemId ?? string.Empty;
         float bundleScale = Math.Clamp(config.BundleTooltipScale / 100f, 0.50f, 2.00f);
         float seedScale   = Math.Clamp(config.SeedTooltipScale   / 100f, 0.50f, 2.00f);
 
+        // Scanner instance'ını al — instance seed cache için
+        var scanner = ModEntry.Instance?.Scanner;
+
+        // Önce fidan kontrolü — (F) tipinde olduğu için Object cast'inden önce
+        // (F) prefix'li her item'ı fidan olarak kabul et (mod ağaçları dahil)
+        bool isFTypeSapling = qualifiedId.StartsWith("(F)", System.StringComparison.OrdinalIgnoreCase);
+        if (isFTypeSapling || (scanner is not null && scanner.IsFruitTreeSapling(qualifiedId)))
+        {
+            string treeProductId   = string.Empty;
+            string treeProductName = string.Empty;
+            var    treeSeasons     = new List<string>();
+            if (scanner is not null)
+            {
+                var treeInfo = scanner.GetFruitTreeInfo(qualifiedId);
+                treeProductId   = treeInfo.productQualifiedId;
+                treeProductName = treeInfo.productName;
+                treeSeasons     = treeInfo.seasons;
+            }
+            var productMatches = !string.IsNullOrWhiteSpace(treeProductId)
+                ? missing.Where(bi => string.Equals(bi.QualifiedItemId, treeProductId,
+                                    System.StringComparison.OrdinalIgnoreCase)).ToList()
+                : new List<BundleItem>();
+            DrawFruitTreeTooltip(b, treeProductName, treeSeasons,
+                BuildBundleLines(productMatches, config), vanillaTooltipWidth, seedScale);
+            return;
+        }
+
+        // Custom Bush kontrolü (Cornucopia yetiştirici/çalı itemleri)
+        if (scanner is not null && scanner.IsCustomBushSapling(qualifiedId))
+        {
+            var bushInfo = scanner.GetCustomBushInfo(qualifiedId);
+            var productMatches = !string.IsNullOrWhiteSpace(bushInfo.productQualifiedId)
+                ? missing.Where(bi => string.Equals(bi.QualifiedItemId, bushInfo.productQualifiedId,
+                                    System.StringComparison.OrdinalIgnoreCase)).ToList()
+                : new List<BundleItem>();
+            DrawFruitTreeTooltip(b, bushInfo.productName, bushInfo.seasons,
+                BuildBundleLines(productMatches, config), vanillaTooltipWidth, seedScale);
+            return;
+        }
+
+        // Geri kalan kontroller sadece Object tipi için
+        if (hovered is not StardewValley.Object obj) return;
+
+        int itemId = obj.ParentSheetIndex;
+
         bool isSeed = obj.Category == StardewValley.Object.SeedsCategory
                    || BundleScanner.SeedToHarvest.ContainsKey(itemId)
-                   || IsCropSeed(itemId);
+                   || IsCropSeed(qualifiedId, scanner);
 
         if (isSeed)
         {
-            var (_, _, harvestId) = BundleScanner.GetCropInfoFromSeed(itemId);
-            string harvestQualified = harvestId > 0 ? $"(O){harvestId}" : string.Empty;
-            var harvestMatches = harvestId > 0
+            List<string> seasons;
+            string harvestQualified;
+            int growDays;
+            string? season;
+
+            if (scanner is not null)
+            {
+                var info = scanner.GetSeedInfo(qualifiedId);
+                growDays        = info.growDays;
+                season          = info.season;
+                harvestQualified = info.harvestQualifiedId;
+                seasons         = info.seasons;
+            }
+            else
+            {
+                var info = BundleScanner.GetCropInfoFromSeedQualified(qualifiedId);
+                growDays        = info.growDays;
+                season          = info.season;
+                harvestQualified = info.harvestQualifiedId;
+                seasons         = season is not null ? new List<string> { season } : new List<string>();
+            }
+
+            // Harvest item bundle'da var mı?
+            var harvestMatches = !string.IsNullOrWhiteSpace(harvestQualified)
                 ? missing.Where(bi => string.Equals(bi.QualifiedItemId, harvestQualified,
-                                    System.StringComparison.OrdinalIgnoreCase)
-                                   || bi.ItemId == harvestId).ToList()
+                                    System.StringComparison.OrdinalIgnoreCase)).ToList()
                 : new List<BundleItem>();
-            DrawSeedTooltip(b, itemId, BuildBundleLines(harvestMatches, config), vanillaTooltipWidth, seedScale, bundleScale);
+
+            // Legacy int fallback
+            if (harvestMatches.Count == 0 && itemId > 0)
+            {
+                var (_, _, legacyHarvestId) = BundleScanner.GetCropInfoFromSeed(itemId);
+                if (legacyHarvestId > 0)
+                    harvestMatches = missing.Where(bi => bi.ItemId == legacyHarvestId).ToList();
+            }
+
+            DrawSeedTooltip(b, qualifiedId, growDays, season, seasons,
+                BuildBundleLines(harvestMatches, config), vanillaTooltipWidth, seedScale, bundleScale);
             return;
         }
 
@@ -65,13 +140,25 @@ internal static class TooltipHelper
         DrawBox(b, BuildBundleLines(matches, config), vanillaTooltipWidth, bundleScale);
     }
 
-    private static bool IsCropSeed(int itemId)
+    private static bool IsCropSeed(string qualifiedId, BundleScanner? scanner)
     {
+        if (string.IsNullOrWhiteSpace(qualifiedId)) return false;
+
+        // Instance cache varsa oradan bak (hızlı)
+        if (scanner is not null)
+        {
+            var info = scanner.GetSeedInfo(qualifiedId);
+            if (info.growDays > 0) return true;
+        }
+
         try
         {
             var crops = Game1.content.Load<Dictionary<string,
                 StardewValley.GameData.Crops.CropData>>("Data/Crops");
-            return crops.ContainsKey(itemId.ToString());
+            string rawKey = qualifiedId.StartsWith("(", StringComparison.Ordinal)
+                ? qualifiedId[(qualifiedId.IndexOf(')') + 1)..]
+                : qualifiedId;
+            return crops.ContainsKey(rawKey);
         }
         catch { return false; }
     }
@@ -97,7 +184,13 @@ internal static class TooltipHelper
                         Game1.textColor));
 
             if (match.Season is not null)
-                lines.Add((I18n.TooltipSeason(I18n.SeasonLabel(match.Season)), Game1.textColor));
+            {
+                // Çoklu mevsim desteği
+                string seasonText = match.Seasons.Count > 1
+                    ? string.Join(", ", match.Seasons.Select(s => I18n.SeasonLabel(s)))
+                    : I18n.SeasonLabel(match.Season);
+                lines.Add((I18n.TooltipSeason(seasonText), Game1.textColor));
+            }
             else if (match.IsGreenhouse && match.GrowDays > 0)
                 lines.Add((I18n.SeedTooltipGreenhouseAvailable(), new Color(34, 139, 34)));
 
@@ -122,18 +215,48 @@ internal static class TooltipHelper
         return lines;
     }
 
-    private static void DrawSeedTooltip(SpriteBatch b, int seedId,
+    private static void DrawFruitTreeTooltip(SpriteBatch b, string productName,
+        List<string> seasons, List<(string text, Color color)> bundleLines,
+        int vanillaTooltipWidth, float scale = 1f)
+    {
+        string currentSeason = Game1.currentSeason?.ToLower() ?? "";
+        bool inSeason = seasons.Count == 0 || seasons.Contains(currentSeason);
+
+        var lines = new List<(string text, Color color)>();
+        lines.Add((I18n.FruitTreeTooltipTitle(), new Color(80, 60, 20)));
+
+        if (!string.IsNullOrWhiteSpace(productName))
+            lines.Add((I18n.FruitTreeProduct(productName), Game1.textColor));
+
+        if (seasons.Count == 0)
+            lines.Add((I18n.FruitTreeAllSeason(), new Color(34, 139, 34)));
+        else
+        {
+            string seasonText = string.Join(", ", seasons.Select(s => I18n.SeasonLabel(s)));
+            lines.Add((I18n.FruitTreeSeasons(seasonText), inSeason ? Game1.textColor : new Color(160, 80, 0)));
+        }
+
+        lines.Add((I18n.FruitTreeGrowth(), Game1.textColor));
+
+        if (bundleLines.Count > 0)
+        {
+            lines.Add((Separator, new Color(150, 150, 150)));
+            lines.AddRange(bundleLines);
+        }
+
+        DrawBox(b, lines, vanillaTooltipWidth, scale);
+    }
+
+    private static void DrawSeedTooltip(SpriteBatch b, string qualifiedSeedId,
+        int growDays, string? season, List<string> seasons,
         List<(string text, Color color)> bundleLines, int vanillaTooltipWidth,
         float seedScale = 1f, float bundleScale = 1f)
     {
-        var (growDays, season, _) = BundleScanner.GetCropInfoFromSeed(seedId);
-
         string currentSeason = Game1.currentSeason?.ToLower() ?? "";
         int today        = Game1.dayOfMonth;
-        int harvestDay   = today + growDays;
         int lastPlantDay = 28 - growDays;
         int daysLeft     = lastPlantDay - today;
-        bool wrongSeason = season != null && season != currentSeason;
+        bool wrongSeason = season != null && !seasons.Contains(currentSeason);
 
         var lines = new List<(string text, Color color)>();
 
@@ -143,9 +266,24 @@ internal static class TooltipHelper
             lines.Add((I18n.SeedTooltipGrowDays(growDays), Game1.textColor));
 
             if (season != null)
-                lines.Add((I18n.SeedTooltipSeason(I18n.SeasonLabel(season)), Game1.textColor));
+            {
+                string seasonText = seasons.Count > 1
+                    ? string.Join(", ", seasons.Select(s => I18n.SeasonLabel(s)))
+                    : I18n.SeasonLabel(season);
+                lines.Add((I18n.SeedTooltipSeason(seasonText), Game1.textColor));
+            }
+            else
+                lines.Add((I18n.SeedTooltipGreenhouseAvailable(), new Color(34, 139, 34)));
 
-            if (wrongSeason)
+            if (season == null)
+            {
+                // Greenhouse/all-season — hasat günü hesapla
+                int harvestDay = Game1.dayOfMonth + growDays;
+                lines.Add(harvestDay <= 28
+                    ? (I18n.SeedTooltipHarvestDay(harvestDay), new Color(34, 139, 34))
+                    : (I18n.SeedTooltipWontFit(), Color.Red));
+            }
+            else if (wrongSeason)
             {
                 bool hasGreenhouse = Game1.player?.hasOrWillReceiveMail("ccPantry") == true
                                   || Game1.player?.hasOrWillReceiveMail("jojaGreenhouse") == true;
@@ -160,6 +298,7 @@ internal static class TooltipHelper
             }
             else
             {
+                int harvestDay = today + growDays;
                 lines.Add(harvestDay <= 28
                     ? (I18n.SeedTooltipHarvestDay(harvestDay), new Color(34, 139, 34))
                     : (I18n.SeedTooltipWontFit(), Color.Red));
@@ -193,7 +332,6 @@ internal static class TooltipHelper
     {
         const int Pad    = 12;
         const int Margin = 8;
-        const int Gap    = 16;
 
         // scale'e göre font yüksekliği
         float fontH = Game1.smallFont.MeasureString("A").Y * scale;
@@ -227,18 +365,9 @@ internal static class TooltipHelper
 
         int x, y;
 
-        if (vanillaTooltipWidth > 0)
-        {
-            int leftX = mx - width - Gap;
-            x = leftX >= marginS ? leftX : mx + Gap;
-            x = Math.Clamp(x, marginS, sw - width - marginS);
-            y = Math.Clamp(my - height - Gap, marginS, sh - height - marginS);
-        }
-        else
-        {
-            x = marginS;
-            y = sh - height - marginS;
-        }
+        // Her zaman sol-alt köşe — vanilla tooltip pozisyonundan bağımsız
+        x = marginS;
+        y = sh - height - marginS;
 
         b.Draw(Game1.staminaRect,
             new Rectangle(x + 4, y + 4, width, height),

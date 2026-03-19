@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
+    <NoWarn>CS9057</NoWarn>
 
 
 
@@ -18,7 +19,7 @@
 
   <ItemGroup>
 
-    <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.3.2" />
+    <PackageReference Include="Pathoschild.Stardew.ModBuildConfig" Version="4.4.0" />
 
     <PackageReference Include="Lib.Harmony" Version="2.3.3" />
   </ItemGroup>
@@ -35,7 +36,10 @@
     <None Update="manifest.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="assets\**\*" Condition="Exists('assets')">
+    <None Update="i18n\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="images\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

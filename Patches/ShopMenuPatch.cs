@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
-using HarmonyLib;
+﻿using HarmonyLib;
 using Microsoft.Xna.Framework.Graphics;
+using StardewModdingAPI;
 using StardewValley;
 using StardewValley.Menus;
 
@@ -15,6 +15,7 @@ internal static class ShopMenuPatch
         if (!ModEntry.TryGetSharedState(out var missingItems, out var config)) return;
         if (config is null || !config.ShowInventoryTooltips) return;
 
+        // hoveredItem ISalable tipinde — Item'a cast et
         Item? hovered = __instance.hoveredItem as Item;
         if (hovered is null) return;
 

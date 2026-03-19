@@ -14,6 +14,7 @@
   "tab.forage": "Toplama",
   "tab.construction": "İnşaat",
   "tab.other": "Diğer",
+  "tab.seasonal": "Mevsim",
 
   "badge.today": "BUGÜN!",
   "badge.days_left": "{{days}}g kaldı",
@@ -105,7 +106,7 @@
   "infotip.sort_label": "Sırala",
   "infotip.missing": "eksik",
   "infotip.urgent": "acil",
-  "infotip.seasonal": "bu mevsim",
+  "infotip.seasonal": "Bu Mevsim",
   "infotip.planned_count": "planlandı",
   "infotip.plan_btn": "Planla",
   "infotip.planned_btn": "Planlandı",
@@ -121,6 +122,12 @@
   "seed.wrong_season": "  ✘ Yanlış mevsim — şimdi ekilemez",
   "seed.greenhouse_available": "  🌿 Serada ekilebilir",
   "seed.greenhouse_locked": "  🔒 Sera açık değil — ekilemez",
+
+  "fruittree.tooltip_title": "Meyve Ağacı Fidanı",
+  "fruittree.product": "  Ürün: {{item}}",
+  "fruittree.seasons": "  Hasat mevsimi: {{seasons}}",
+  "fruittree.growth": "  Tam büyüme: 28 gün",
+  "fruittree.all_season": "  🌿 Tüm yıl boyunca ürün verir",
 
   "bundle.spring_crops": "İlkbahar Ürünleri",
   "bundle.summer_crops": "Yaz Ürünleri",
@@ -149,6 +156,8 @@
   "bundle.summer_foraging": "Yaz Toplaması",
   "bundle.winter_foraging": "Kış Toplaması",
   "bundle.the_missing": "Kayıp Demet",
+
+  "search.placeholder": "Ara...",
 
   "cal.legend_urgent": "acil",
   "cal.legend_soon": "yakında",

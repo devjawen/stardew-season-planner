@@ -14,6 +14,7 @@
   "tab.forage": "Forage",
   "tab.construction": "Build",
   "tab.other": "Other",
+  "tab.seasonal": "Season",
 
   "badge.today": "TODAY!",
   "badge.days_left": "{{days}}d left",
@@ -122,6 +123,12 @@
   "seed.greenhouse_available": "  🌿 Can be planted in greenhouse",
   "seed.greenhouse_locked": "  🔒 Greenhouse not unlocked — cannot plant",
 
+  "fruittree.tooltip_title": "Fruit Tree Sapling",
+  "fruittree.product": "  Produces: {{item}}",
+  "fruittree.seasons": "  Harvest season: {{seasons}}",
+  "fruittree.growth": "  Full growth: 28 days",
+  "fruittree.all_season": "  🌿 Produces year-round",
+
   "bundle.spring_crops": "Spring Crops",
   "bundle.summer_crops": "Summer Crops",
   "bundle.fall_crops": "Fall Crops",
@@ -150,7 +157,7 @@
   "bundle.winter_foraging": "Winter Foraging",
   "bundle.the_missing": "The Missing",
 
-  "cal.legend_urgent": "urgent",
+  "search.placeholder": "Search...",
   "cal.legend_soon": "soon",
   "cal.legend_later": "later"
 }

@@ -18,6 +18,7 @@ public sealed class ModEntry : Mod
 
     private ModConfig _config = null!;
     private BundleScanner _scanner = null!;
+    internal BundleScanner? Scanner => _scanner;
     private bool _safeToRun = true;
     private bool _eventsRegistered;
 

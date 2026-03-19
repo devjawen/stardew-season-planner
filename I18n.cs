@@ -26,6 +26,7 @@ internal static class I18n
     public static string TabForage()       => _t.Get("tab.forage");
     public static string TabConstruction() => _t.Get("tab.construction");
     public static string TabOther()        => _t.Get("tab.other");
+    public static string TabSeasonal()     => _t.Get("tab.seasonal");
 
     public static string BadgeToday()           => _t.Get("badge.today");
     public static string BadgeDaysLeft(int days) => _t.Get("badge.days_left", new { days });
@@ -145,9 +146,17 @@ internal static class I18n
     public static string SeedTooltipGreenhouseAvailable()        => _t.Get("seed.greenhouse_available");
     public static string SeedTooltipGreenhouseLocked()           => _t.Get("seed.greenhouse_locked");
 
+    public static string FruitTreeTooltipTitle()                 => _t.Get("fruittree.tooltip_title");
+    public static string FruitTreeProduct(string item)           => _t.Get("fruittree.product", new { item });
+    public static string FruitTreeSeasons(string seasons)        => _t.Get("fruittree.seasons", new { seasons });
+    public static string FruitTreeGrowth()                       => _t.Get("fruittree.growth");
+    public static string FruitTreeAllSeason()                    => _t.Get("fruittree.all_season");
+
     public static string CalLegendUrgent() => _t.Get("cal.legend_urgent");
     public static string CalLegendSoon()   => _t.Get("cal.legend_soon");
     public static string CalLegendLater()  => _t.Get("cal.legend_later");
+
+    public static string SearchPlaceholder() => _t.Get("search.placeholder");
 
 
     public static string BundleName(string key)
