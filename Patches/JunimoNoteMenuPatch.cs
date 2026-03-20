@@ -1,9 +1,9 @@
 using HarmonyLib;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
 using StardewValley.Menus;
 using System.Collections;
-using System.Collections.Generic;
 using System.Reflection;
 
 namespace SeasonPlanner.Patches;
@@ -11,16 +11,17 @@ namespace SeasonPlanner.Patches;
 [HarmonyPatch(typeof(JunimoNoteMenu), nameof(JunimoNoteMenu.draw), new[] { typeof(SpriteBatch) })]
 internal static class JunimoNoteMenuPatch
 {
-    private static readonly FieldInfo? BundlesField =
-        typeof(JunimoNoteMenu).GetField("bundles",
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-
-    private static readonly FieldInfo? CurrentPageBundleField =
+    private static readonly FieldInfo? _currentPageBundleField =
         typeof(JunimoNoteMenu).GetField("currentPageBundle",
             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
-    private static FieldInfo? _ingredientsField;
-    private static FieldInfo? _ingredientItemField;
+    private static readonly FieldInfo? _ingredientListField =
+        typeof(JunimoNoteMenu).GetField("ingredientList",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
+    private static FieldInfo? _bundleIngredientsField;
+    private static FieldInfo? _bundleIngredientCompletedField;
+    private static FieldInfo? _bundleIngredientIdField;
 
     [HarmonyPriority(Priority.Low)]
     private static void Postfix(JunimoNoteMenu __instance, SpriteBatch b)
@@ -28,114 +29,89 @@ internal static class JunimoNoteMenuPatch
         if (!ModEntry.TryGetSharedState(out var missingItems, out var config)) return;
         if (config is null || !config.ShowInventoryTooltips) return;
 
-        Item? hovered = FindHoveredIngredient(__instance);
+        var currentBundle = _currentPageBundleField?.GetValue(__instance);
+        if (currentBundle is null) return;
+
+        EnsureBundleFields(currentBundle);
+
+        var ingredientList = _ingredientListField?.GetValue(__instance) as IList;
+        var ingredients    = _bundleIngredientsField?.GetValue(currentBundle) as IList;
+
+        if (ingredientList is null || ingredientList.Count == 0) return;
+        if (ingredients is null || ingredients.Count == 0) return;
+
+        Item? hovered = FindHoveredIngredient(ingredientList, ingredients);
         if (hovered is null) return;
 
         TooltipHelper.DrawCommunityTooltip(b, hovered, missingItems, config);
     }
 
-    private static void ResolveBundleFields(object bundle)
+    private static Item? FindHoveredIngredient(IList ingredientList, IList ingredients)
+    {
+        int mx = Game1.getMouseX(true);
+        int my = Game1.getMouseY(true);
+
+        for (int i = 0; i < ingredients.Count && i < ingredientList.Count; i++)
+        {
+            var ingredient = ingredients[i];
+            if (ingredient is null) continue;
+
+            bool completed = _bundleIngredientCompletedField?.GetValue(ingredient) is true;
+            if (completed) continue;
+
+            if (ingredientList[i] is not ClickableTextureComponent ctc) continue;
+            if (!ctc.bounds.Contains(mx, my)) continue;
+
+            var rawId = _bundleIngredientIdField?.GetValue(ingredient)?.ToString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(rawId)) continue;
+
+            return TryCreateItem(rawId);
+        }
+
+        return null;
+    }
+
+    private static void EnsureBundleFields(object bundle)
     {
         var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        var bundleType = bundle.GetType();
 
-        if (_ingredientsField is null)
-            _ingredientsField = bundleType.GetField("ingredients", flags);
+        if (_bundleIngredientsField is null)
+            _bundleIngredientsField = bundle.GetType().GetField("ingredients", flags);
 
-        if (_ingredientsField is null) return;
+        if (_bundleIngredientsField is null) return;
 
-        if (_ingredientItemField is null)
+        if (_bundleIngredientCompletedField is null || _bundleIngredientIdField is null)
         {
-            var list = _ingredientsField.GetValue(bundle) as IList;
+            var list = _bundleIngredientsField.GetValue(bundle) as IList;
             if (list is null || list.Count == 0) return;
             var first = list[0];
-            if (first is not null)
-                _ingredientItemField = first.GetType().GetField("item", flags);
+            if (first is null) return;
+            var t = first.GetType();
+            _bundleIngredientCompletedField ??= t.GetField("completed", flags);
+            _bundleIngredientIdField        ??= t.GetField("id", flags);
         }
     }
 
-    private static Item? FindHoveredIngredient(JunimoNoteMenu menu)
+    private static Item? TryCreateItem(string rawId)
     {
-        int mx = Game1.getMouseX();
-        int my = Game1.getMouseY();
-
-        var currentBundle = CurrentPageBundleField?.GetValue(menu);
-        if (currentBundle is not null)
+        if (rawId.StartsWith("(", System.StringComparison.Ordinal))
         {
-            var item = SearchBundleIngredients(currentBundle, mx, my);
-            if (item is not null) return item;
-        }
-
-        var bundles = BundlesField?.GetValue(menu) as IList;
-        if (bundles is null) return null;
-
-        foreach (var bundle in bundles)
-        {
-            if (bundle is null) continue;
-            var item = SearchBundleIngredients(bundle, mx, my);
-            if (item is not null) return item;
-        }
-
-        return null;
-    }
-
-    private static Item? SearchBundleIngredients(object bundle, int mx, int my)
-    {
-        ResolveBundleFields(bundle);
-        if (_ingredientsField is null) return null;
-
-        var ingredients = _ingredientsField.GetValue(bundle) as IList;
-        if (ingredients is null) return null;
-
-        foreach (var ingredient in ingredients)
-        {
-            if (ingredient is not ClickableTextureComponent comp) continue;
-            if (!comp.bounds.Contains(mx, my)) continue;
-
-            if (_ingredientItemField is not null)
-            {
-                var item = _ingredientItemField.GetValue(ingredient) as Item;
-                if (item is not null) return item;
-            }
-
-            var fallback = TryCreateItem(comp.name ?? string.Empty);
-            if (fallback is not null) return fallback;
-        }
-
-        return null;
-    }
-
-    private static Item? TryCreateItem(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return null;
-
-        string itemId = name.Contains(' ') ? name.Split(' ')[0] : name;
-        if (string.IsNullOrWhiteSpace(itemId) || itemId == "ingredient_list_slot") return null;
-
-        if (itemId.StartsWith("(", System.StringComparison.Ordinal))
-        {
-            try
-            {
-                var item = ItemRegistry.Create(itemId, 1, 0, allowNull: true);
-                if (item is not null) return item;
-            }
-            catch { }
+            try { return ItemRegistry.Create(rawId, 1, 0, allowNull: true); } catch { }
         }
 
         foreach (string prefix in new[] { "(O)", "(F)", "(BC)", "(W)", "(H)", "(S)" })
         {
             try
             {
-                var item = ItemRegistry.Create($"{prefix}{itemId}", 1, 0, allowNull: true);
+                var item = ItemRegistry.Create($"{prefix}{rawId}", 1, 0, allowNull: true);
                 if (item is not null) return item;
             }
             catch { }
         }
 
-        if (int.TryParse(itemId, out int legacyId) && legacyId > 0)
+        if (int.TryParse(rawId, out _))
         {
-            try { return new StardewValley.Object(itemId, 1); }
-            catch { }
+            try { return new StardewValley.Object(rawId, 1); } catch { }
         }
 
         return null;

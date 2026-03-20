@@ -420,7 +420,7 @@ public sealed class BundleScanner
             }
         }
 
-        _monitor.Log($"[BundleScanner] {result.Count} eksik item tarandÄ±.", LogLevel.Debug);
+        _monitor.Log($"[BundleScanner] {result.Count} eksik item tarandı. / {result.Count} missing items scanned.", LogLevel.Debug);
         return result;
     }
 
@@ -437,7 +437,7 @@ public sealed class BundleScanner
 
         if (int.TryParse(rawToken, out int negId) && negId <= 0)
         {
-            _monitor.Log($"[BundleScanner] Skipping placeholder token '{rawToken}'", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] '{rawToken}' token atlandı (placeholder). / Skipping placeholder token '{rawToken}'", LogLevel.Trace);
             return string.Empty;
         }
 
@@ -465,7 +465,7 @@ public sealed class BundleScanner
             catch { }
         }
 
-        _monitor.Log($"[BundleScanner] Could not resolve item token '{rawToken}' via ItemRegistry", LogLevel.Trace);
+        _monitor.Log($"[BundleScanner] '{rawToken}' item token çözümlenemedi. / Could not resolve item token '{rawToken}' via ItemRegistry", LogLevel.Trace);
         return string.Empty;
     }
 
@@ -597,7 +597,7 @@ public sealed class BundleScanner
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/Fish yuklenemedi: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] Data/Fish yüklenemedi / could not load: {ex.Message}", LogLevel.Trace);
         }
 
         EnrichFishLocationsFromLocationData();
@@ -647,7 +647,7 @@ public sealed class BundleScanner
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/Locations fish enrichment hatasi: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] Data/Locations balık zenginleştirme hatası / fish enrichment error: {ex.Message}", LogLevel.Trace);
         }
     }
 
@@ -794,7 +794,7 @@ public sealed class BundleScanner
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/Shops yÃ¼klenemedi: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] Data/Shops yüklenemedi / could not load: {ex.Message}", LogLevel.Trace);
         }
     }
 
@@ -1116,7 +1116,7 @@ public sealed class BundleScanner
         try
         {
             var trees = Game1.content.Load<Dictionary<string, StardewValley.GameData.FruitTrees.FruitTreeData>>("Data/FruitTrees");
-            _monitor.Log($"[FruitTree] Data/FruitTrees yÃ¼klendi: {trees.Count} kayÄ±t", LogLevel.Debug);
+            _monitor.Log($"[FruitTree] Data/FruitTrees yüklendi / loaded: {trees.Count} kayıt / records", LogLevel.Debug);
             foreach (var (saplingKey, data) in trees)
             {
                 if (data is null) continue;
@@ -1157,13 +1157,13 @@ public sealed class BundleScanner
                 _fruitTreeCache.TryAdd(saplingQualifiedO, entry);
                 _fruitTreeCache.TryAdd(saplingQualifiedF, entry);
 
-                _monitor.Log($"[FruitTree] Cache: {saplingKey} / {saplingQualifiedF} â†’ {productName} [{string.Join(",", seasons)}]", LogLevel.Trace);
+                _monitor.Log($"[FruitTree] Cache: {saplingKey} / {saplingQualifiedF} -> {productName} [{string.Join(",", seasons)}]", LogLevel.Trace);
             }
-            _monitor.Log($"[FruitTree] Cache dolduruldu: {_fruitTreeCache.Count} giriÅŸ ({trees.Count} aÄŸaÃ§)", LogLevel.Trace);
+            _monitor.Log($"[FruitTree] Cache dolduruldu / filled: {_fruitTreeCache.Count} giris / entries ({trees.Count} agac / trees)", LogLevel.Trace);
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/FruitTrees yÃ¼klenemedi: {ex.Message}", LogLevel.Warn);
+            _monitor.Log($"[BundleScanner] Data/FruitTrees yuklenemedi / could not load: {ex.Message}", LogLevel.Warn);
         }
     }
 
@@ -1241,14 +1241,14 @@ public sealed class BundleScanner
                 .FirstOrDefault(a => a.GetName().Name == "CustomBush");
             if (customBushAssembly is null)
             {
-                _monitor.Log("[CustomBush] Assembly bulunamadÄ±", LogLevel.Trace);
+                _monitor.Log("[CustomBush] Assembly bulunamadi / Assembly not found", LogLevel.Trace);
                 return;
             }
 
             var customBushDataType = customBushAssembly.GetType("LeFauxMods.CustomBush.Models.CustomBushData");
             if (customBushDataType is null)
             {
-                _monitor.Log("[CustomBush] CustomBushData tipi bulunamadÄ±", LogLevel.Trace);
+                _monitor.Log("[CustomBush] CustomBushData tipi bulunamadi / CustomBushData type not found", LogLevel.Trace);
                 return;
             }
 
@@ -1311,11 +1311,11 @@ public sealed class BundleScanner
                     ? saplingQualifiedId[(saplingQualifiedId.IndexOf(')') + 1)..] : saplingQualifiedId;
                 _customBushCache.TryAdd(rawKey, bushEntry);
             }
-            _monitor.Log($"[CustomBush] Cache dolduruldu: {_customBushCache.Count / 2} bush", LogLevel.Debug);
+            _monitor.Log($"[CustomBush] Cache dolduruldu / filled: {_customBushCache.Count / 2} bush", LogLevel.Debug);
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] CustomBush cache hatasÄ±: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] CustomBush cache hatasi / error: {ex.Message}", LogLevel.Trace);
         }
     }
 

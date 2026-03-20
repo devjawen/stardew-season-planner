@@ -62,14 +62,14 @@ public sealed class ModEntry : Mod
         if (smapi.MajorVersion != TestedSmapiMajor)
         {
             Monitor.Log(
-                $"[SeasonPlanner] SMAPI major version mismatch! Tested with {TestedSmapiMajor}.x, running on {smapi}. Harmony patches are disabled to prevent crashes. Please update the mod.",
+                $"[SeasonPlanner] SMAPI major surum uyumsuzlugu! Test edilen: {TestedSmapiMajor}.x, mevcut: {smapi}. Harmony patch'leri devre disi birakildi. Modu guncelleyin. / SMAPI major version mismatch! Tested with {TestedSmapiMajor}.x, running on {smapi}. Harmony patches are disabled to prevent crashes. Please update the mod.",
                 LogLevel.Warn);
             _safeToRun = false;
         }
         else if (smapi.MinorVersion > 9)
         {
             Monitor.Log(
-                $"[SeasonPlanner] Running on SMAPI {smapi} (tested up to {TestedSmapiMajor}.x). If you encounter issues, please report them.",
+                $"[SeasonPlanner] SMAPI {smapi} uzerinde calisiyor (test edilen: {TestedSmapiMajor}.x). Sorun yasarsaniz lutfen bildirin. / Running on SMAPI {smapi} (tested up to {TestedSmapiMajor}.x). If you encounter issues, please report them.",
                 LogLevel.Debug);
         }
 
@@ -81,7 +81,7 @@ public sealed class ModEntry : Mod
 
         RegisterEvents(helper.Events);
 
-        Monitor.Log($"Season Planner & Demet Hatırlatıcı yüklendi (SMAPI {smapi}).", LogLevel.Info);
+        Monitor.Log($"Season Planner & Demet Hatirlatici yuklendi / loaded (SMAPI {smapi}).", LogLevel.Info);
         Monitor.Log($"Ownership signature: {OwnershipSignature}", LogLevel.Trace);
     }
 
