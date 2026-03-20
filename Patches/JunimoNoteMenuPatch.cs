@@ -1,5 +1,4 @@
 using HarmonyLib;
-using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
 using StardewValley.Menus;
@@ -11,10 +10,9 @@ namespace SeasonPlanner.Patches;
 [HarmonyPatch(typeof(JunimoNoteMenu), nameof(JunimoNoteMenu.draw), new[] { typeof(SpriteBatch) })]
 internal static class JunimoNoteMenuPatch
 {
-    private static FieldInfo? _currentBundleField;
-    private static FieldInfo? _ingredientListField;
-    private static FieldInfo? _bundleIngredientDescriptionField;
-    private static bool _fieldsResolved;
+    private static readonly FieldInfo? IngredientListField =
+        typeof(JunimoNoteMenu).GetField("ingredientList",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
     [HarmonyPriority(Priority.Low)]
     private static void Postfix(JunimoNoteMenu __instance, SpriteBatch b)
@@ -28,70 +26,19 @@ internal static class JunimoNoteMenuPatch
         TooltipHelper.DrawCommunityTooltip(b, hovered, missingItems, config);
     }
 
-    private static void ResolveFields(JunimoNoteMenu menu)
-    {
-        if (_fieldsResolved) return;
-        _fieldsResolved = true;
-
-        var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-        var menuType = menu.GetType();
-        _currentBundleField = menuType.GetField("currentBundle", flags)
-                           ?? menuType.GetField("_currentBundle", flags);
-
-        if (_currentBundleField != null)
-        {
-            var bundleType = _currentBundleField.FieldType;
-            _ingredientListField = bundleType.GetField("ingredientList", flags)
-                                ?? bundleType.GetField("ingredients", flags)
-                                ?? bundleType.GetField("_ingredientList", flags);
-
-            _bundleIngredientDescriptionField = bundleType.GetField("bundleIngredientDescription", flags)
-                                             ?? bundleType.GetField("ingredientDescription", flags);
-        }
-
-        ModEntry.Instance?.Monitor.Log(
-            $"[JunimoNoteMenuPatch] currentBundle={_currentBundleField?.Name ?? "null"}, " +
-            $"ingredientList={_ingredientListField?.Name ?? "null"}",
-            StardewModdingAPI.LogLevel.Debug);
-    }
-
     private static Item? FindHoveredIngredient(JunimoNoteMenu menu)
     {
         int mx = Game1.getMouseX();
         int my = Game1.getMouseY();
 
-        ResolveFields(menu);
+        var list = IngredientListField?.GetValue(menu) as List<ClickableTextureComponent>;
+        if (list is null) return null;
 
-        if (_currentBundleField != null && _ingredientListField != null)
+        foreach (var component in list)
         {
-            var bundle = _currentBundleField.GetValue(menu);
-            if (bundle != null)
-            {
-                var list = _ingredientListField.GetValue(bundle) as IList<ClickableTextureComponent>;
-                if (list != null)
-                {
-                    foreach (var component in list)
-                    {
-                        if (!component.bounds.Contains(mx, my)) continue;
-                        var item = TryCreateItem(component.name ?? string.Empty);
-                        if (item != null) return item;
-                    }
-                }
-            }
-        }
-
-        var allFields = menu.GetType()
-            .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        foreach (var field in allFields)
-        {
-            if (field.GetValue(menu) is not IList<ClickableTextureComponent> list) continue;
-            foreach (var component in list)
-            {
-                if (!component.bounds.Contains(mx, my)) continue;
-                var item = TryCreateItem(component.name ?? string.Empty);
-                if (item != null) return item;
-            }
+            if (!component.bounds.Contains(mx, my)) continue;
+            var item = TryCreateItem(component.name ?? string.Empty);
+            if (item is not null) return item;
         }
 
         return null;
@@ -109,7 +56,7 @@ internal static class JunimoNoteMenuPatch
             try
             {
                 var item = ItemRegistry.Create(itemId, 1, 0, allowNull: true);
-                if (item != null) return item;
+                if (item is not null) return item;
             }
             catch { }
         }
@@ -119,7 +66,7 @@ internal static class JunimoNoteMenuPatch
             try
             {
                 var item = ItemRegistry.Create($"{prefix}{itemId}", 1, 0, allowNull: true);
-                if (item != null) return item;
+                if (item is not null) return item;
             }
             catch { }
         }
@@ -127,7 +74,7 @@ internal static class JunimoNoteMenuPatch
         try
         {
             var data = ItemRegistry.GetData(itemId);
-            if (data != null)
+            if (data is not null)
                 return ItemRegistry.Create(data.QualifiedItemId, 1, 0, allowNull: true);
         }
         catch { }
