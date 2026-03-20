@@ -32,6 +32,10 @@
 
   "tooltip.required_for": ">> {{bundle}} için gerekli!",
   "tooltip.completed_for": "[Tamam] {{bundle}} demetine teslim edildi",
+  "tooltip.fish_location": "  Yakalanır: {{location}}",
+  "tooltip.fish_time": "  Saat: {{time}}",
+  "tooltip.sunny_fish": "  (güneşli) Güneşli havada tutulur",
+  "tooltip.forage_hint": "  Toplanarak bulunur",
   "tooltip.category_amount": "  {{category}}  |  Gerekli: {{qty}}x",
   "tooltip.quality_suffix": " (Kalite {{quality}})",
   "tooltip.season": "  Mevsim: {{season}}",

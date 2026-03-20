@@ -199,29 +199,53 @@ internal static class TooltipHelper
             lines.Add((I18n.TooltipCategoryAmount(GetCategoryLabel(match.Category), match.Quantity) + qSuffix,
                         Game1.textColor));
 
-            if (match.Season is not null)
+            if (match.Category == BundleCategory.Fish)
             {
-                string seasonText = match.Seasons.Count > 1
-                    ? string.Join(", ", match.Seasons.Select(s => I18n.SeasonLabel(s)))
-                    : I18n.SeasonLabel(match.Season);
-                lines.Add((I18n.TooltipSeason(seasonText), Game1.textColor));
-            }
-            else if (match.IsGreenhouse && match.GrowDays > 0)
-                lines.Add((I18n.SeedTooltipGreenhouseAvailable(), new Color(34, 139, 34)));
+                if (match.FishLocations.Count > 0)
+                    lines.Add((I18n.TooltipFishLocation(string.Join(", ", match.FishLocations)), new Color(30, 100, 200)));
 
-            if (match.GrowDays > 0)
+                if (match.Season is not null)
+                {
+                    string seasonText = match.Seasons.Count > 1
+                        ? string.Join(", ", match.Seasons.Select(s => I18n.SeasonLabel(s)))
+                        : I18n.SeasonLabel(match.Season);
+                    lines.Add((I18n.TooltipSeason(seasonText), Game1.textColor));
+                }
+
+                if (match.FishTimeRange is not null)
+                    lines.Add((I18n.TooltipFishTime(match.FishTimeRange), Game1.textColor));
+
+                if (match.RequiresRain)
+                    lines.Add((I18n.TooltipRainFish(), new Color(80, 140, 220)));
+                else if (match.FishWeather == "sunny")
+                    lines.Add((I18n.TooltipSunnyFish(), new Color(220, 180, 0)));
+            }
+            else
             {
-                int lastPlant = 28 - match.GrowDays;
-                int daysLeft  = lastPlant - Game1.dayOfMonth;
-                Color dlColor = daysLeft <= 0 ? Color.Red
-                              : daysLeft <= 3 ? new Color(220, 80, 0)
-                              : daysLeft <= 7 ? new Color(200, 160, 0)
-                              : Game1.textColor;
-                lines.Add((I18n.TooltipGrowDeadline(match.GrowDays, lastPlant), dlColor));
-            }
+                if (match.Season is not null)
+                {
+                    string seasonText = match.Seasons.Count > 1
+                        ? string.Join(", ", match.Seasons.Select(s => I18n.SeasonLabel(s)))
+                        : I18n.SeasonLabel(match.Season);
+                    lines.Add((I18n.TooltipSeason(seasonText), Game1.textColor));
+                }
+                else if (match.IsGreenhouse && match.GrowDays > 0)
+                    lines.Add((I18n.SeedTooltipGreenhouseAvailable(), new Color(34, 139, 34)));
 
-            if (match.RequiresRain)
-                lines.Add((I18n.TooltipRainFish(), new Color(80, 140, 220)));
+                if (match.GrowDays > 0)
+                {
+                    int lastPlant = 28 - match.GrowDays;
+                    int daysLeft  = lastPlant - Game1.dayOfMonth;
+                    Color dlColor = daysLeft <= 0 ? Color.Red
+                                  : daysLeft <= 3 ? new Color(220, 80, 0)
+                                  : daysLeft <= 7 ? new Color(200, 160, 0)
+                                  : Game1.textColor;
+                    lines.Add((I18n.TooltipGrowDeadline(match.GrowDays, lastPlant), dlColor));
+                }
+
+                if (match.Category == BundleCategory.Forage)
+                    lines.Add((I18n.TooltipForageHint(), new Color(34, 139, 34)));
+            }
 
             if (config.ShowShopSource && match.ShopSource is not null)
                 lines.Add((I18n.TooltipShopSource(match.ShopSource), new Color(0, 150, 100)));
@@ -339,6 +363,46 @@ internal static class TooltipHelper
 
         if (lines.Count == 0) return;
         DrawBox(b, lines, vanillaTooltipWidth, seedScale);
+    }
+
+    internal static void DrawCommunityTooltip(
+        SpriteBatch b,
+        Item? hovered,
+        IReadOnlyList<BundleItem> missing,
+        ModConfig config)
+    {
+        if (hovered is null) return;
+
+        var scanner = ModEntry.Instance?.Scanner;
+        float scale = Math.Clamp(config.BundleTooltipScale / 100f, 0.50f, 2.00f);
+
+        var matches = missing.Where(bi => bi.MatchesItem(hovered)).ToList();
+
+        var completedMatches = new List<BundleItem>();
+        var allItems = scanner?.GetAllBundleItems();
+        if (allItems is not null)
+        {
+            var missingKeys = new HashSet<string>(
+                missing.Select(bi => $"{bi.QualifiedItemId}:{bi.BundleName}"),
+                StringComparer.OrdinalIgnoreCase);
+            completedMatches = allItems
+                .Where(bi => bi.MatchesItem(hovered)
+                          && !missingKeys.Contains($"{bi.QualifiedItemId}:{bi.BundleName}"))
+                .ToList();
+        }
+
+        if (matches.Count == 0 && completedMatches.Count == 0) return;
+
+        var lines = BuildBundleLines(matches, config);
+
+        foreach (var comp in completedMatches)
+        {
+            if (lines.Count > 0) lines.Add((Separator, new Color(150, 150, 150)));
+            lines.Add((I18n.TooltipCompletedFor(comp.BundleName), new Color(34, 139, 34)));
+        }
+
+        if (lines.Count == 0) return;
+        DrawBox(b, lines, 0, scale);
     }
 
     internal static void DrawBox(SpriteBatch b, List<(string text, Color color)> lines,

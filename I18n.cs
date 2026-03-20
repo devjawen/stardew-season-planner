@@ -53,6 +53,12 @@ internal static class I18n
         _t.Get("tooltip.required_for", new { bundle });
     public static string TooltipCompletedFor(string bundle) =>
         _t.Get("tooltip.completed_for", new { bundle });
+    public static string TooltipFishLocation(string location) =>
+        _t.Get("tooltip.fish_location", new { location });
+    public static string TooltipFishTime(string time) =>
+        _t.Get("tooltip.fish_time", new { time });
+    public static string TooltipSunnyFish() => _t.Get("tooltip.sunny_fish");
+    public static string TooltipForageHint() => _t.Get("tooltip.forage_hint");
     public static string TooltipCategoryAmount(string category, int qty) =>
         _t.Get("tooltip.category_amount", new { category, qty });
     public static string TooltipQualitySuffix(string quality) =>

@@ -26,6 +26,9 @@ public sealed class BundleItem
     public BundleCategory Category { get; init; }
     public string? ShopSource     { get; init; }
     public IReadOnlySet<string> ContextTags { get; init; } = new HashSet<string>();
+    public IReadOnlyList<string> FishLocations { get; init; } = Array.Empty<string>();
+    public string? FishTimeRange  { get; init; }
+    public string? FishWeather    { get; init; }
 
     public bool MatchesItem(Item item)
     {
@@ -118,6 +121,7 @@ public sealed class BundleScanner
     private HashSet<string>?                                     _rainFishCache;
     private Dictionary<string, (string productQualifiedId, string productName, List<string> seasons)>? _fruitTreeCache;
     private Dictionary<string, (string productQualifiedId, string productName, List<string> seasons, int ageToProduce)>? _customBushCache;
+    private Dictionary<string, (List<string> locations, string? timeRange, string? weather)>? _fishInfoCache;
 
     public BundleScanner(IMonitor monitor, IModHelper helper)
     {
@@ -276,6 +280,7 @@ public sealed class BundleScanner
         _rainFishCache   = null;
         _fruitTreeCache  = null;
         _customBushCache = null;
+        _fishInfoCache   = null;
     }
 
 
@@ -307,6 +312,8 @@ public sealed class BundleScanner
                 if (string.IsNullOrWhiteSpace(qualifiedId)) continue;
                 int legacyId = TryGetLegacyObjectId(qualifiedId);
                 var cropInfo = GetCropInfo(qualifiedId, legacyId);
+                var tags2    = GetItemContextTags(qualifiedId, quality);
+                var fishInfo2 = GetFishInfo(qualifiedId);
                 result.Add(new BundleItem
                 {
                     ItemId          = legacyId,
@@ -319,10 +326,13 @@ public sealed class BundleScanner
                     GrowDays        = cropInfo.growDays,
                     IsGreenhouse    = cropInfo.isGreenhouse,
                     BundleName      = bundleName,
-                    RequiresRain    = IsRainItem(qualifiedId, GetItemContextTags(qualifiedId, quality)),
-                    Category        = ClassifyItem(qualifiedId, legacyId, GetItemContextTags(qualifiedId, quality), cropInfo.growDays),
+                    RequiresRain    = IsRainItem(qualifiedId, tags2),
+                    Category        = ClassifyItem(qualifiedId, legacyId, tags2, cropInfo.growDays),
                     ShopSource      = ResolveShopSource(qualifiedId, legacyId),
-                    ContextTags     = GetItemContextTags(qualifiedId, quality),
+                    ContextTags     = tags2,
+                    FishLocations   = fishInfo2.locations,
+                    FishTimeRange   = fishInfo2.timeRange,
+                    FishWeather     = fishInfo2.weather,
                 });
             }
         }
@@ -385,6 +395,7 @@ public sealed class BundleScanner
                 var    tags      = GetItemContextTags(qualifiedId, quality);
                 var    cropInfo  = GetCropInfo(qualifiedId, legacyId);
                 string? shopSrc  = ResolveShopSource(qualifiedId, legacyId);
+                var    fishInfo  = GetFishInfo(qualifiedId);
 
                 result.Add(new BundleItem
                 {
@@ -402,6 +413,9 @@ public sealed class BundleScanner
                     Category        = ClassifyItem(qualifiedId, legacyId, tags, cropInfo.growDays),
                     ShopSource      = shopSrc,
                     ContextTags     = tags,
+                    FishLocations   = fishInfo.locations,
+                    FishTimeRange   = fishInfo.timeRange,
+                    FishWeather     = fishInfo.weather,
                 });
             }
         }
@@ -527,6 +541,7 @@ public sealed class BundleScanner
     {
         if (_rainFishCache is not null) return;
         _rainFishCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        _fishInfoCache = new Dictionary<string, (List<string>, string?, string?)>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -536,15 +551,138 @@ public sealed class BundleScanner
                 if (string.IsNullOrWhiteSpace(raw)) continue;
                 string[] fields = raw.Split('/');
                 if (fields.Length <= 7) continue;
+
                 string weather = fields[7].Trim().ToLower();
-                if (weather is "rainy" or "both")
-                    _rainFishCache.Add(NormalizeQualifiedItemId(fishId));
+
+                string? timeRange = null;
+                if (fields.Length > 5)
+                {
+                    string[] times = fields[5].Trim().Split(' ');
+                    if (times.Length >= 2
+                        && int.TryParse(times[0], out int tStart)
+                        && int.TryParse(times[1], out int tEnd))
+                    {
+                        timeRange = $"{FormatGameTime(tStart)}-{FormatGameTime(tEnd)}";
+                    }
+                }
+
+                var locations = new List<string>();
+                if (fields.Length > 4)
+                {
+                    foreach (var loc in fields[4].Trim().Split(' '))
+                    {
+                        string mapped = MapFishLocation(loc.Trim());
+                        if (!string.IsNullOrWhiteSpace(mapped) && !locations.Contains(mapped))
+                            locations.Add(mapped);
+                    }
+                }
+
+                string? weatherLabel = weather switch
+                {
+                    "rainy" => "rain",
+                    "sunny" => "sunny",
+                    _       => null,
+                };
+
+                var entry = (locations, timeRange, weatherLabel);
+
+                var keys = ResolveAllFishKeys(fishId);
+                foreach (var k in keys)
+                {
+                    _fishInfoCache.TryAdd(k, entry);
+                    if (weather is "rainy" or "both")
+                        _rainFishCache.Add(k);
+                }
             }
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/Fish yÃ¼klenemedi: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] Data/Fish yuklenemedi: {ex.Message}", LogLevel.Trace);
         }
+    }
+
+    private static List<string> ResolveAllFishKeys(string fishId)
+    {
+        var keys = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(fishId)) return keys;
+
+        if (fishId.StartsWith("(", StringComparison.Ordinal))
+        {
+            keys.Add(fishId);
+            string inner = fishId[(fishId.IndexOf(')') + 1)..];
+            keys.Add(inner);
+            keys.Add($"(O){inner}");
+            return keys;
+        }
+
+        if (int.TryParse(fishId, out _))
+        {
+            keys.Add(fishId);
+            keys.Add($"(O){fishId}");
+        }
+        else
+        {
+            keys.Add(fishId);
+            keys.Add($"(O){fishId}");
+
+            try
+            {
+                var data = ItemRegistry.GetData($"(O){fishId}");
+                if (data is not null && !keys.Contains(data.QualifiedItemId))
+                    keys.Add(data.QualifiedItemId);
+            }
+            catch { }
+
+            try
+            {
+                var data = ItemRegistry.GetData(fishId);
+                if (data is not null && !keys.Contains(data.QualifiedItemId))
+                    keys.Add(data.QualifiedItemId);
+            }
+            catch { }
+        }
+
+        return keys;
+    }
+
+    private static string FormatGameTime(int t)
+    {
+        int h = t / 100;
+        int m = t % 100;
+        return m == 0 ? $"{h}:00" : $"{h}:{m:D2}";
+    }
+
+    private static string MapFishLocation(string loc) => loc.ToLower() switch
+    {
+        "ocean"        => "Ocean",
+        "river"        => "River",
+        "lake"         => "Lake",
+        "forest"       => "Forest",
+        "mountain"     => "Mountain Lake",
+        "mines"        => "Mines",
+        "desert"       => "Desert",
+        "town"         => "Town",
+        "woodskip"     => "Secret Woods",
+        "submarine"    => "Submarine",
+        "witch"        => "Witch's Swamp",
+        "volcano"      => "Volcano",
+        "islandfreshwater" => "Island",
+        "islandocean"  => "Island Ocean",
+        _              => string.Empty,
+    };
+
+    public (List<string> locations, string? timeRange, string? weather) GetFishInfo(string qualifiedId)
+    {
+        if (_fishInfoCache is null) EnsureRainFishCache();
+        if (_fishInfoCache!.TryGetValue(qualifiedId, out var info)) return info;
+
+        string rawId = qualifiedId.StartsWith("(O)", StringComparison.OrdinalIgnoreCase)
+            ? qualifiedId[3..] : qualifiedId;
+        if (_fishInfoCache.TryGetValue($"(O){rawId}", out info)) return info;
+        if (_fishInfoCache.TryGetValue(rawId, out info)) return info;
+
+        return (new List<string>(), null, null);
     }
 
 

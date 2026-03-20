@@ -32,6 +32,10 @@
 
   "tooltip.required_for": ">> Required for {{bundle}}!",
   "tooltip.completed_for": "[Done] Delivered to {{bundle}}",
+  "tooltip.fish_location": "  Caught in: {{location}}",
+  "tooltip.fish_time": "  Time: {{time}}",
+  "tooltip.sunny_fish": "  (sunny) Caught in sunny weather",
+  "tooltip.forage_hint": "  Found while foraging",
   "tooltip.category_amount": "  {{category}}  |  Need: {{qty}}x",
   "tooltip.quality_suffix": " ({{quality}})",
   "tooltip.season": "  Season: {{season}}",
