@@ -599,7 +599,77 @@ public sealed class BundleScanner
         {
             _monitor.Log($"[BundleScanner] Data/Fish yuklenemedi: {ex.Message}", LogLevel.Trace);
         }
+
+        EnrichFishLocationsFromLocationData();
     }
+
+    private void EnrichFishLocationsFromLocationData()
+    {
+        try
+        {
+            var locationData = _gameContent.Load<Dictionary<string, StardewValley.GameData.Locations.LocationData>>("Data/Locations");
+            foreach (var (locationName, data) in locationData)
+            {
+                if (data?.Fish is null) continue;
+                string mappedLocation = MapLocationName(locationName);
+                if (string.IsNullOrWhiteSpace(mappedLocation)) continue;
+
+                foreach (var fishEntry in data.Fish)
+                {
+                    var itemIds = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(fishEntry.ItemId))
+                        itemIds.Add(fishEntry.ItemId);
+                    if (fishEntry.RandomItemId is not null)
+                        itemIds.AddRange(fishEntry.RandomItemId);
+
+                    foreach (var rawId in itemIds)
+                    {
+                        if (string.IsNullOrWhiteSpace(rawId)) continue;
+                        var keys = ResolveAllFishKeys(rawId);
+                        foreach (var k in keys)
+                        {
+                            if (_fishInfoCache!.TryGetValue(k, out var existing))
+                            {
+                                if (!existing.Item1.Contains(mappedLocation))
+                                {
+                                    var newLocs = new List<string>(existing.Item1) { mappedLocation };
+                                    _fishInfoCache[k] = (newLocs, existing.Item2, existing.Item3);
+                                }
+                            }
+                            else
+                            {
+                                _fishInfoCache!.TryAdd(k, (new List<string> { mappedLocation }, null, null));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _monitor.Log($"[BundleScanner] Data/Locations fish enrichment hatasi: {ex.Message}", LogLevel.Trace);
+        }
+    }
+
+    private static string MapLocationName(string locationName) => locationName.ToLower() switch
+    {
+        "beach"             => "Ocean",
+        "forest"            => "Forest",
+        "mountain"          => "Mountain Lake",
+        "town"              => "Town",
+        "mine"              => "Mines",
+        "desert"            => "Desert",
+        "islandwest"        => "Island",
+        "islandsouth"       => "Island Ocean",
+        "islandnorth"       => "Island",
+        "islandeast"        => "Island",
+        "sewer"             => "Sewer",
+        "witchswamp"        => "Witch's Swamp",
+        "volcanodungeon"    => "Volcano",
+        "submarine"         => "Submarine",
+        "bathhouse_pool"    => "Spa",
+        _                   => string.Empty,
+    };
 
     private static List<string> ResolveAllFishKeys(string fishId)
     {
@@ -677,10 +747,19 @@ public sealed class BundleScanner
         if (_fishInfoCache is null) EnsureRainFishCache();
         if (_fishInfoCache!.TryGetValue(qualifiedId, out var info)) return info;
 
-        string rawId = qualifiedId.StartsWith("(O)", StringComparison.OrdinalIgnoreCase)
-            ? qualifiedId[3..] : qualifiedId;
-        if (_fishInfoCache.TryGetValue($"(O){rawId}", out info)) return info;
+        string rawId = qualifiedId.StartsWith("(", StringComparison.OrdinalIgnoreCase)
+            ? qualifiedId[(qualifiedId.IndexOf(')') + 1)..] : qualifiedId;
+
         if (_fishInfoCache.TryGetValue(rawId, out info)) return info;
+        if (_fishInfoCache.TryGetValue($"(O){rawId}", out info)) return info;
+
+        foreach (var key in _fishInfoCache.Keys)
+        {
+            string keyRaw = key.StartsWith("(", StringComparison.Ordinal)
+                ? key[(key.IndexOf(')') + 1)..] : key;
+            if (string.Equals(keyRaw, rawId, StringComparison.OrdinalIgnoreCase))
+                return _fishInfoCache[key];
+        }
 
         return (new List<string>(), null, null);
     }
