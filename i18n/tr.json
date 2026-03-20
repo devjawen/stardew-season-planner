@@ -30,13 +30,13 @@
   "season.fall": "Sonbahar",
   "season.winter": "Kış",
 
-  "tooltip.required_for": "✦ {{bundle}} için gerekli!",
+  "tooltip.required_for": ">> {{bundle}} için gerekli!",
   "tooltip.category_amount": "  {{category}}  |  Gerekli: {{qty}}x",
   "tooltip.quality_suffix": " (Kalite {{quality}})",
   "tooltip.season": "  Mevsim: {{season}}",
   "tooltip.grow_deadline": "  Büyüme: {{days}} gün  |  Son Ekim: Gün {{day}}",
-  "tooltip.rain_fish": "  ☔ Yağmurlu havada tutulur",
-  "tooltip.shop_source": "  🛒 Satıcı: {{shop}}",
+  "tooltip.rain_fish": "  (yagmur) Yağmurlu havada tutulur",
+  "tooltip.shop_source": "  Satıcı: {{shop}}",
 
   "category.crop": "Ürün",
   "category.fish": "Balık",
@@ -45,10 +45,10 @@
   "category.forage": "Toplama",
   "category.other": "Diğer",
 
-  "hud.planting_today": "BUGÜN son gün! {{item}} ek — {{bundle}}",
-  "hud.planting_warning": "Uyarı: {{item}} için son ekim günü {{day}}. ({{days}}g kaldı) — {{bundle}}",
-  "hud.rain_fish": "☔ Yarın {{item}} için harika! — {{bundle}}",
-  "hud.planned_completed": "Tamamlandı: {{item}} — {{bundle}} demetine teslim edildi!",
+  "hud.planting_today": "BUGÜN son gün! {{item}} ek -- {{bundle}}",
+  "hud.planting_warning": "Uyarı: {{item}} için son ekim günü {{day}}. ({{days}}g kaldı) -- {{bundle}}",
+  "hud.rain_fish": "(yagmur) Yarın {{item}} için harika! -- {{bundle}}",
+  "hud.planned_completed": "Tamamlandı: {{item}} -- {{bundle}} demetine teslim edildi!",
 
   "gmcm.calendar_markers": "Takvim İşaretleri",
   "gmcm.calendar_markers.tooltip": "Son ekim günlerini takvimde işaretler.",
@@ -115,19 +115,19 @@
   "seed.tooltip_title": "Ekim Bilgisi",
   "seed.grow_days": "  Büyüme: {{days}} gün",
   "seed.season": "  Mevsim: {{season}}",
-  "seed.harvest_day": "  Bugün ekersen → Gün {{day}}'de hazır",
-  "seed.wont_fit": "  ✘ Bu ay yetişmez!",
+  "seed.harvest_day": "  Bugün ekersen -> Gün {{day}}'de hazir",
+  "seed.wont_fit": "  [X] Bu ay yetişmez!",
   "seed.last_plant": "  Son ekim günü: Gün {{day}}  ({{left}}g kaldı)",
-  "seed.last_day_passed": "  ✘ Son ekim günü geçti!",
-  "seed.wrong_season": "  ✘ Yanlış mevsim — şimdi ekilemez",
-  "seed.greenhouse_available": "  🌿 Serada ekilebilir",
-  "seed.greenhouse_locked": "  🔒 Sera açık değil — ekilemez",
+  "seed.last_day_passed": "  [X] Son ekim günü geçti!",
+  "seed.wrong_season": "  [X] Yanlış mevsim -- şimdi ekilemez",
+  "seed.greenhouse_available": "  [GH] Serada ekilebilir",
+  "seed.greenhouse_locked": "  [X] Sera açık değil -- ekilemez",
 
   "fruittree.tooltip_title": "Meyve Ağacı Fidanı",
   "fruittree.product": "  Ürün: {{item}}",
   "fruittree.seasons": "  Hasat mevsimi: {{seasons}}",
   "fruittree.growth": "  Tam büyüme: 28 gün",
-  "fruittree.all_season": "  🌿 Tüm yıl boyunca ürün verir",
+  "fruittree.all_season": "  [GH] Tüm yıl boyunca ürün verir",
 
   "bundle.spring_crops": "İlkbahar Ürünleri",
   "bundle.summer_crops": "Yaz Ürünleri",
@@ -161,5 +161,18 @@
 
   "cal.legend_urgent": "acil",
   "cal.legend_soon": "yakında",
-  "cal.legend_later": "sonra"
+  "cal.legend_later": "sonra",
+
+  "cal.day": "Gün {{day}}",
+  "cal.today": "BUGÜN!",
+  "cal.days_ago": "gün önce",
+  "cal.days_later": "gün sonra",
+  "cal.last_plant_day": "Son ekim günü:",
+  "cal.week.mon": "Pzt",
+  "cal.week.tue": "Sal",
+  "cal.week.wed": "Çar",
+  "cal.week.thu": "Per",
+  "cal.week.fri": "Cum",
+  "cal.week.sat": "Cmt",
+  "cal.week.sun": "Paz"
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using StardewModdingAPI;
@@ -17,8 +17,8 @@ public sealed class BundleItem
     public string ItemName        { get; init; } = string.Empty;
     public int    Quantity        { get; init; }
     public int    Quality         { get; init; }
-    public string? Season         { get; init; }   // ilk mevsim (geriye dönük uyumluluk)
-    public IReadOnlyList<string> Seasons { get; init; } = Array.Empty<string>(); // tüm mevsimler
+    public string? Season         { get; init; }   // ilk mevsim (geriye dÃ¶nÃ¼k uyumluluk)
+    public IReadOnlyList<string> Seasons { get; init; } = Array.Empty<string>(); // tÃ¼m mevsimler
     public int    GrowDays        { get; init; }
     public bool   IsGreenhouse    { get; init; }   // true = no season restriction
     public string BundleName      { get; init; } = string.Empty;
@@ -31,19 +31,15 @@ public sealed class BundleItem
     {
         if (item is null) return false;
 
-        // Primary: qualified ID match (covers all 1.6 mod items)
         if (!string.IsNullOrWhiteSpace(QualifiedItemId)
             && string.Equals(QualifiedItemId, item.QualifiedItemId, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        // Legacy int ID match (vanilla fallback)
         if (ItemId > 0
             && item is StardewValley.Object obj
             && obj.ParentSheetIndex == ItemId)
             return true;
 
-        // Mod item fallback: unqualified ID match
-        // e.g. QualifiedItemId = "(O)FlashShifter.SVE_Starfish", item.ItemId = "FlashShifter.SVE_Starfish"
         if (!string.IsNullOrWhiteSpace(QualifiedItemId) && QualifiedItemId.Length > 3
             && QualifiedItemId.StartsWith("(", StringComparison.Ordinal))
         {
@@ -56,8 +52,6 @@ public sealed class BundleItem
             }
         }
 
-        // JA/DGA fallback: context tag "item_id_object_<unqualifiedId>"
-        // JA registers items with context tags like "item_id_object_modname.itemname"
         if (!string.IsNullOrWhiteSpace(QualifiedItemId))
         {
             string rawId = QualifiedItemId.StartsWith("(", StringComparison.Ordinal)
@@ -79,7 +73,6 @@ public sealed class BundleItem
 
 public sealed class BundleScanner
 {
-    // Vanilla hardcoded shop sources (legacy int ID → shop name)
     private static readonly Dictionary<int, string> VanillaShopSources = new()
     {
         { 24,  "Pierre" }, { 188, "Pierre" }, { 190, "Pierre" }, { 192, "Pierre" },
@@ -94,10 +87,9 @@ public sealed class BundleScanner
         { 372, "Krobus" }, { 766, "Krobus" },
         { 346, "Gus"    }, { 348, "Gus"    },
         { 773, "Harvey" },
-        { 745, "Gezgin Satıcı" }, { 433, "Gezgin Satıcı" },
+        { 745, "Gezgin SatÄ±cÄ±" }, { 433, "Gezgin SatÄ±cÄ±" },
     };
 
-    // Vanilla seed → harvest fallback (for seeds not in Data/Crops)
     public static readonly Dictionary<int, int> SeedToHarvest = new()
     {
         { 472, 24  }, { 473, 188 }, { 474, 190 }, { 475, 192 },
@@ -122,13 +114,9 @@ public sealed class BundleScanner
 
     private Dictionary<string, string>?                          _shopSourceCache;
     private Dictionary<string, (int growDays, string? season, bool isGreenhouse, List<string> seasons)>? _cropInfoCache;
-    // seedKey (raw) → (growDays, season, isGreenhouse, seasons, harvestQualifiedId)
     private Dictionary<string, (int growDays, string? season, bool isGreenhouse, List<string> seasons, string harvestQualifiedId)>? _seedCache;
-    // qualifiedId → true if it's a rain fish (built from Data/Fish)
     private HashSet<string>?                                     _rainFishCache;
-    // saplingKey (raw) → (productQualifiedId, productName, seasons)
     private Dictionary<string, (string productQualifiedId, string productName, List<string> seasons)>? _fruitTreeCache;
-    // Custom Bush (furyx639.CustomBush) — sapling qualifiedId → (productQualifiedId, productName, seasons, ageToProduce)
     private Dictionary<string, (string productQualifiedId, string productName, List<string> seasons, int ageToProduce)>? _customBushCache;
 
     public BundleScanner(IMonitor monitor, IModHelper helper)
@@ -154,12 +142,17 @@ public sealed class BundleScanner
             : _cache;
     }
 
+    public IReadOnlyList<BundleItem> GetAllBundleItems()
+    {
+        GetMissingItems();
+        return BuildAllBundleList();
+    }
+
     private static string GetBundleCompletionHash()
     {
         if (Game1.getLocationFromName("CommunityCenter") is not CommunityCenter cc)
             return string.Empty;
 
-        // Tamamlanan slot sayısını hash olarak kullan
         int completed = 0;
         foreach (var slots in cc.bundles.Values)
             foreach (bool slot in slots)
@@ -168,7 +161,6 @@ public sealed class BundleScanner
         return completed.ToString();
     }
 
-    // Tüm mevsimdeki ekilebilir/toplanabilir itemler — bundle'dan bağımsız
     public IReadOnlyList<BundleItem> GetAllSeasonalItems()
     {
         EnsureCropInfoCache();
@@ -180,12 +172,10 @@ public sealed class BundleScanner
         var result     = new List<BundleItem>();
         var seen       = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // ── Crops (Data/Crops) ──────────────────────────────────────────────
         if (_seedCache is not null)
         {
             foreach (var (seedKey, info) in _seedCache)
             {
-                // Sadece qualified key'leri işle (duplicate'leri atla)
                 if (!seedKey.StartsWith("(", StringComparison.Ordinal)) continue;
                 if (!info.isGreenhouse && !info.seasons.Contains(season)) continue;
                 if (!seen.Add(seedKey)) continue;
@@ -212,7 +202,6 @@ public sealed class BundleScanner
             }
         }
 
-        // ── Fruit Trees (Data/FruitTrees) ───────────────────────────────────
         if (_fruitTreeCache is not null)
         {
             var processed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -243,7 +232,6 @@ public sealed class BundleScanner
             }
         }
 
-        // ── Custom Bush ─────────────────────────────────────────────────────
         if (_customBushCache is not null)
         {
             var processed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -290,7 +278,56 @@ public sealed class BundleScanner
         _customBushCache = null;
     }
 
-    // ─── Main scan ────────────────────────────────────────────────────────────
+
+    private List<BundleItem> BuildAllBundleList()
+    {
+        var result = new List<BundleItem>();
+        if (Game1.getLocationFromName("CommunityCenter") is not CommunityCenter cc) return result;
+
+        EnsureShopSourceCache();
+        EnsureCropInfoCache();
+        EnsureRainFishCache();
+
+        Dictionary<string, string> bundleData;
+        try   { bundleData = _gameContent.Load<Dictionary<string, string>>("Data/Bundles"); }
+        catch { return result; }
+
+        foreach (var (_, raw) in bundleData)
+        {
+            string[] parts = raw.Split('/');
+            if (parts.Length < 3) continue;
+            string bundleName = LocalizeBundleName(parts[0]);
+            string[] tokens   = parts[2].Split(' ');
+            for (int i = 0; i + 2 < tokens.Length; i += 3)
+            {
+                string rawToken = tokens[i];
+                if (!int.TryParse(tokens[i + 1], out int qty))     continue;
+                if (!int.TryParse(tokens[i + 2], out int quality)) continue;
+                string qualifiedId = ResolveItemId(rawToken);
+                if (string.IsNullOrWhiteSpace(qualifiedId)) continue;
+                int legacyId = TryGetLegacyObjectId(qualifiedId);
+                var cropInfo = GetCropInfo(qualifiedId, legacyId);
+                result.Add(new BundleItem
+                {
+                    ItemId          = legacyId,
+                    QualifiedItemId = qualifiedId,
+                    ItemName        = GetItemName(qualifiedId, legacyId, quality),
+                    Quantity        = qty,
+                    Quality         = quality,
+                    Season          = cropInfo.season,
+                    Seasons         = cropInfo.seasons,
+                    GrowDays        = cropInfo.growDays,
+                    IsGreenhouse    = cropInfo.isGreenhouse,
+                    BundleName      = bundleName,
+                    RequiresRain    = IsRainItem(qualifiedId, GetItemContextTags(qualifiedId, quality)),
+                    Category        = ClassifyItem(qualifiedId, legacyId, GetItemContextTags(qualifiedId, quality), cropInfo.growDays),
+                    ShopSource      = ResolveShopSource(qualifiedId, legacyId),
+                    ContextTags     = GetItemContextTags(qualifiedId, quality),
+                });
+            }
+        }
+        return result;
+    }
 
     private List<BundleItem> BuildMissingList()
     {
@@ -309,7 +346,6 @@ public sealed class BundleScanner
         try   { bundleData = _gameContent.Load<Dictionary<string, string>>("Data/Bundles"); }
         catch { return result; }
 
-        // Build an ordered list of bundle keys for randomized-bundle index fallback
         var bundleKeys = bundleData.Keys.ToList();
 
         foreach (var (key, raw) in bundleData)
@@ -320,21 +356,16 @@ public sealed class BundleScanner
             string bundleName = LocalizeBundleName(parts[0]);
             string itemsRaw   = parts[2];
 
-            // --- FIX 2: Randomized bundles ---
-            // Primary: parse the bundle index from the key (e.g. "Pantry/0" → 0)
-            // Fallback: use the ordinal position in the dictionary
             bool[] completion;
             if (int.TryParse(key.Split('/').Last(), out int bundleIndex)
                 && cc.bundles.TryGetValue(bundleIndex, out completion!))
             {
-                // found by explicit index — normal path
             }
             else
             {
-                // Randomized bundles shift indices; try matching by ordinal position
                 int ordinal = bundleKeys.IndexOf(key);
                 if (ordinal < 0 || !cc.bundles.TryGetValue(ordinal, out completion!))
-                    continue; // can't map → skip safely
+                    continue; // can't map â†’ skip safely
             }
 
             string[] tokens = itemsRaw.Split(' ');
@@ -347,7 +378,6 @@ public sealed class BundleScanner
                 int slot = i / 3;
                 if (slot < completion.Length && completion[slot]) continue;
 
-                // --- FIX 1: JA/DGA placeholder IDs (-1, negative) ---
                 string qualifiedId = ResolveItemId(rawToken);
                 if (string.IsNullOrWhiteSpace(qualifiedId)) continue;
 
@@ -376,33 +406,27 @@ public sealed class BundleScanner
             }
         }
 
-        _monitor.Log($"[BundleScanner] {result.Count} eksik item tarandı.", LogLevel.Debug);
+        _monitor.Log($"[BundleScanner] {result.Count} eksik item tarandÄ±.", LogLevel.Debug);
         return result;
     }
 
-    // ─── FIX 1: Resolve item IDs including JA/DGA placeholders ──────────────
 
     private string ResolveItemId(string rawToken)
     {
         if (string.IsNullOrWhiteSpace(rawToken)) return string.Empty;
 
-        // Already qualified (e.g. "(O)24", "(BC)130")
         if (rawToken.StartsWith("(", StringComparison.Ordinal))
             return rawToken;
 
-        // Positive int → vanilla object
         if (int.TryParse(rawToken, out int id) && id > 0)
             return $"(O){id}";
 
-        // Negative or zero int → unresolvable placeholder, skip
         if (int.TryParse(rawToken, out int negId) && negId <= 0)
         {
             _monitor.Log($"[BundleScanner] Skipping placeholder token '{rawToken}'", LogLevel.Trace);
             return string.Empty;
         }
 
-        // Non-numeric string key — mod item (e.g. "FlashShifter.StardewValleyExpanded_Starfish")
-        // Try ItemRegistry with (O) prefix first (most mod items are objects)
         try
         {
             var data = ItemRegistry.GetData($"(O){rawToken}");
@@ -410,7 +434,6 @@ public sealed class BundleScanner
         }
         catch { }
 
-        // Try without prefix (ItemRegistry may resolve it directly)
         try
         {
             var data = ItemRegistry.GetData(rawToken);
@@ -418,7 +441,6 @@ public sealed class BundleScanner
         }
         catch { }
 
-        // Try common type prefixes for mod items
         foreach (string prefix in new[] { "(O)", "(BC)", "(F)", "(W)", "(H)", "(S)", "(P)" })
         {
             try
@@ -433,7 +455,6 @@ public sealed class BundleScanner
         return string.Empty;
     }
 
-    // ─── Crop info cache ─────────────────────────────────────────────────────
 
     private void EnsureCropInfoCache()
     {
@@ -460,13 +481,11 @@ public sealed class BundleScanner
                 : data.Seasons!.Select(s => s.ToString().ToLower()).ToList();
             string? season    = seasonsList.Count > 0 ? seasonsList[0] : null;
 
-            // Harvest qualified ID
             int harvestIntId = int.TryParse(data.HarvestItemId, out int hid) ? hid : -1;
             string harvestQualified = harvestIntId > 0
                 ? $"(O){harvestIntId}"
                 : $"(O){data.HarvestItemId}";
 
-            // Mod crops: resolve via ItemRegistry
             if (harvestIntId < 0)
             {
                 try
@@ -480,12 +499,10 @@ public sealed class BundleScanner
             var cropTuple = (growDays, season, isGreenhouse, seasonsList);
             var seedTuple = (growDays, season, isGreenhouse, seasonsList, harvestQualified);
 
-            // Index harvest by qualified ID
             string normalizedHarvest = harvestIntId > 0 ? $"(O){harvestIntId}" : harvestQualified;
             _cropInfoCache.TryAdd(normalizedHarvest, cropTuple);
             _cropInfoCache.TryAdd(data.HarvestItemId, cropTuple);
 
-            // Index seed by raw key and qualified key
             _seedCache.TryAdd(seedKey, seedTuple);
             if (int.TryParse(seedKey, out int seedInt))
                 _seedCache.TryAdd($"(O){seedInt}", seedTuple);
@@ -505,15 +522,12 @@ public sealed class BundleScanner
         return (0, null, false, new List<string>());
     }
 
-    // ─── FIX 3: Rain fish cache (reads Data/Fish) ────────────────────────────
 
     private void EnsureRainFishCache()
     {
         if (_rainFishCache is not null) return;
         _rainFishCache = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        // Data/Fish format (1.6): string dictionary, each value is slash-separated
-        // Field index 7 = weather ("rainy", "sunny", "both")
         try
         {
             var fishData = _gameContent.Load<Dictionary<string, string>>("Data/Fish");
@@ -529,11 +543,10 @@ public sealed class BundleScanner
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/Fish yüklenemedi: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] Data/Fish yÃ¼klenemedi: {ex.Message}", LogLevel.Trace);
         }
     }
 
-    // ─── Shop source cache ───────────────────────────────────────────────────
 
     private void EnsureShopSourceCache()
     {
@@ -564,7 +577,7 @@ public sealed class BundleScanner
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/Shops yüklenemedi: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] Data/Shops yÃ¼klenemedi: {ex.Message}", LogLevel.Trace);
         }
     }
 
@@ -597,7 +610,6 @@ public sealed class BundleScanner
         return null;
     }
 
-    // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private static string NormalizeQualifiedItemId(string rawToken)
     {
@@ -626,7 +638,6 @@ public sealed class BundleScanner
         }
         catch { }
 
-        // Fallback: read context tags directly from Data/Objects for mod items
         try
         {
             int legacyId = TryGetLegacyObjectId(qualifiedId);
@@ -637,7 +648,6 @@ public sealed class BundleScanner
                 if (objects.TryGetValue(key, out string? raw))
                 {
                     string[] fields = raw.Split('/');
-                    // Field 13 in 1.6 format = context tags (space-separated)
                     if (fields.Length > 13 && !string.IsNullOrWhiteSpace(fields[13]))
                     {
                         return new HashSet<string>(
@@ -654,7 +664,6 @@ public sealed class BundleScanner
 
     private static string GetItemName(string qualifiedId, int legacyId, int quality)
     {
-        // Primary: ItemRegistry (covers all 1.6 mod items via CP/JA/DGA)
         try
         {
             Item? item = ItemRegistry.Create(qualifiedId, 1, quality, allowNull: true);
@@ -663,7 +672,6 @@ public sealed class BundleScanner
         }
         catch { }
 
-        // Fallback 1: legacy Object constructor
         if (legacyId > 0)
         {
             try
@@ -674,7 +682,6 @@ public sealed class BundleScanner
             catch { }
         }
 
-        // Fallback 2: Data/Objects direct read
         try
         {
             string lookupKey = legacyId > 0 ? legacyId.ToString()
@@ -690,18 +697,15 @@ public sealed class BundleScanner
         }
         catch { }
 
-        // Last resort: strip prefix from qualified ID
         return qualifiedId.StartsWith("(O)", StringComparison.OrdinalIgnoreCase)
             ? qualifiedId[3..] : qualifiedId;
     }
 
     private bool IsRainItem(string qualifiedId, IReadOnlyCollection<string> tags)
     {
-        // FIX 3: Check Data/Fish cache first (covers mod-added rain fish)
         if (_rainFishCache is not null && _rainFishCache.Contains(qualifiedId))
             return true;
 
-        // Context tag fallback (for fish that set tags but aren't in Data/Fish)
         if (tags.Any(t => t.StartsWith("fish", StringComparison.OrdinalIgnoreCase)))
             return tags.Any(t => t.Contains("rain", StringComparison.OrdinalIgnoreCase));
 
@@ -742,9 +746,7 @@ public sealed class BundleScanner
         return localized == key ? englishName : localized;
     }
 
-    // ─── Public helpers used by TooltipHelper ────────────────────────────────
 
-    // Instance seed cache'ini kullanan versiyon — mod tohumları dahil tüm tohumlar
     public (int growDays, string? season, string harvestQualifiedId, List<string> seasons) GetSeedInfo(string qualifiedSeedId)
     {
         if (_seedCache is null) EnsureCropInfoCache();
@@ -753,18 +755,15 @@ public sealed class BundleScanner
             ? qualifiedSeedId[(qualifiedSeedId.IndexOf(')') + 1)..]
             : qualifiedSeedId;
 
-        // Seed cache'den bak
         if (_seedCache!.TryGetValue(rawKey, out var cached))
             return (cached.growDays, cached.season, cached.harvestQualifiedId, cached.seasons);
         if (_seedCache.TryGetValue(qualifiedSeedId, out cached))
             return (cached.growDays, cached.season, cached.harvestQualifiedId, cached.seasons);
 
-        // Legacy int fallback
         if (int.TryParse(rawKey, out int seedInt))
         {
             if (SeedToHarvest.TryGetValue(seedInt, out int fallbackHarvest))
             {
-                // Crop cache'den harvest bilgisini al
                 string harvestQ = $"(O){fallbackHarvest}";
                 if (_cropInfoCache?.TryGetValue(harvestQ, out var ci) == true)
                     return (ci.growDays, ci.season, harvestQ, ci.seasons);
@@ -775,7 +774,6 @@ public sealed class BundleScanner
         return (0, null, string.Empty, new List<string>());
     }
 
-    // Geriye dönük uyumluluk için static versiyon (int seedId)
     public static (int growDays, string? season, int harvestId) GetCropInfoFromSeed(int seedId)
     {
         var result = GetCropInfoFromSeedKey(seedId.ToString());
@@ -802,7 +800,6 @@ public sealed class BundleScanner
         return (0, null, -1);
     }
 
-    // Geriye dönük uyumluluk — static qualified versiyon
     public static (int growDays, string? season, string harvestQualifiedId) GetCropInfoFromSeedQualified(string qualifiedSeedId)
     {
         string rawKey = qualifiedSeedId.StartsWith("(", StringComparison.Ordinal)
@@ -842,7 +839,6 @@ public sealed class BundleScanner
         }
         catch { }
 
-        // Legacy string format
         try
         {
             var crops = Game1.content.Load<Dictionary<string, string>>("Data/Crops");
@@ -865,7 +861,6 @@ public sealed class BundleScanner
         return (0, null, -1, string.Empty);
     }
 
-    // ─── Fruit Tree cache ────────────────────────────────────────────────────
 
     private void EnsureFruitTreeCache()
     {
@@ -874,14 +869,12 @@ public sealed class BundleScanner
 
         try
         {
-            // Game1.content.Load kullan — mod patch'leri (CP) bu üzerinden uygulanır
             var trees = Game1.content.Load<Dictionary<string, StardewValley.GameData.FruitTrees.FruitTreeData>>("Data/FruitTrees");
-            _monitor.Log($"[FruitTree] Data/FruitTrees yüklendi: {trees.Count} kayıt", LogLevel.Debug);
+            _monitor.Log($"[FruitTree] Data/FruitTrees yÃ¼klendi: {trees.Count} kayÄ±t", LogLevel.Debug);
             foreach (var (saplingKey, data) in trees)
             {
                 if (data is null) continue;
 
-                // Ürün listesinden ilk ürünü al
                 string productQualifiedId = string.Empty;
                 string productName        = string.Empty;
                 if (data.Fruit?.Count > 0)
@@ -901,12 +894,9 @@ public sealed class BundleScanner
                     }
                 }
 
-                // Mevsimler
                 var seasons = data.Seasons?.Select(s => s.ToString().ToLower()).ToList()
                            ?? new List<string>();
 
-                // Sapling qualified ID — hem (O) hem (F) prefix'iyle index'le
-                // SDV 1.6'da sapling'ler (F) tipinde: (F)628, (F)629 vb.
                 bool isAlreadyQualified = saplingKey.StartsWith("(", StringComparison.Ordinal);
                 bool isInt = int.TryParse(saplingKey, out int saplingInt);
 
@@ -921,17 +911,16 @@ public sealed class BundleScanner
                 _fruitTreeCache.TryAdd(saplingQualifiedO, entry);
                 _fruitTreeCache.TryAdd(saplingQualifiedF, entry);
 
-                _monitor.Log($"[FruitTree] Cache: {saplingKey} / {saplingQualifiedF} → {productName} [{string.Join(",", seasons)}]", LogLevel.Trace);
+                _monitor.Log($"[FruitTree] Cache: {saplingKey} / {saplingQualifiedF} â†’ {productName} [{string.Join(",", seasons)}]", LogLevel.Trace);
             }
-            _monitor.Log($"[FruitTree] Cache dolduruldu: {_fruitTreeCache.Count} giriş ({trees.Count} ağaç)", LogLevel.Trace);
+            _monitor.Log($"[FruitTree] Cache dolduruldu: {_fruitTreeCache.Count} giriÅŸ ({trees.Count} aÄŸaÃ§)", LogLevel.Trace);
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] Data/FruitTrees yüklenemedi: {ex.Message}", LogLevel.Warn);
+            _monitor.Log($"[BundleScanner] Data/FruitTrees yÃ¼klenemedi: {ex.Message}", LogLevel.Warn);
         }
     }
 
-    // Fidan bilgisi — TooltipHelper tarafından kullanılır
     public (string productQualifiedId, string productName, List<string> seasons) GetFruitTreeInfo(string qualifiedSaplingId)
     {
         EnsureFruitTreeCache();
@@ -939,13 +928,11 @@ public sealed class BundleScanner
 
         if (_fruitTreeCache.TryGetValue(qualifiedSaplingId, out var info)) return info;
 
-        // Prefix'i strip et — "(F)628" → "628"
         string rawKey = qualifiedSaplingId.StartsWith("(", StringComparison.Ordinal)
             ? qualifiedSaplingId[(qualifiedSaplingId.IndexOf(')') + 1)..]
             : qualifiedSaplingId;
         if (_fruitTreeCache.TryGetValue(rawKey, out info)) return info;
 
-        // Cache'de yoksa Data/FruitTrees'den direkt ara (mod ağaçları için)
         try
         {
             var trees = Game1.content.Load<Dictionary<string, StardewValley.GameData.FruitTrees.FruitTreeData>>("Data/FruitTrees");
@@ -969,7 +956,6 @@ public sealed class BundleScanner
                 }
                 var seasons = data.Seasons?.Select(s => s.ToString().ToLower()).ToList() ?? new List<string>();
                 var entry = (productQualifiedId, productName, seasons);
-                // Cache'e ekle
                 _fruitTreeCache.TryAdd(qualifiedSaplingId, entry);
                 _fruitTreeCache.TryAdd(rawKey, entry);
                 return entry;
@@ -980,7 +966,6 @@ public sealed class BundleScanner
         return (string.Empty, string.Empty, new List<string>());
     }
 
-    // Fidan mı? — TooltipHelper tarafından kullanılır
     public bool IsFruitTreeSapling(string qualifiedId)
     {
         if (string.IsNullOrWhiteSpace(qualifiedId)) return false;
@@ -989,7 +974,6 @@ public sealed class BundleScanner
 
         if (_fruitTreeCache.ContainsKey(qualifiedId)) return true;
 
-        // Prefix'i strip et — "(F)628" → "628", "(O)628" → "628"
         string rawKey = qualifiedId.StartsWith("(", StringComparison.Ordinal)
             ? qualifiedId[(qualifiedId.IndexOf(')') + 1)..]
             : qualifiedId;
@@ -997,7 +981,6 @@ public sealed class BundleScanner
         return _fruitTreeCache.ContainsKey(rawKey);
     }
 
-    // ─── Custom Bush cache ───────────────────────────────────────────────────
 
     private void EnsureCustomBushCache()
     {
@@ -1008,26 +991,23 @@ public sealed class BundleScanner
 
         try
         {
-            // CustomBushData tipini reflection ile yükle
             var customBushAssembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "CustomBush");
             if (customBushAssembly is null)
             {
-                _monitor.Log("[CustomBush] Assembly bulunamadı", LogLevel.Trace);
+                _monitor.Log("[CustomBush] Assembly bulunamadÄ±", LogLevel.Trace);
                 return;
             }
 
             var customBushDataType = customBushAssembly.GetType("LeFauxMods.CustomBush.Models.CustomBushData");
             if (customBushDataType is null)
             {
-                _monitor.Log("[CustomBush] CustomBushData tipi bulunamadı", LogLevel.Trace);
+                _monitor.Log("[CustomBush] CustomBushData tipi bulunamadÄ±", LogLevel.Trace);
                 return;
             }
 
-            // Dictionary<string, CustomBushData> tipini oluştur
             var dictType = typeof(Dictionary<,>).MakeGenericType(typeof(string), customBushDataType);
 
-            // IGameContentHelper.Load<T> metodunu reflection ile çağır
             var loadMethod = _gameContent.GetType()
                 .GetMethods()
                 .FirstOrDefault(m => m.Name == "Load" && m.IsGenericMethod && m.GetParameters().Length == 1)
@@ -1089,7 +1069,7 @@ public sealed class BundleScanner
         }
         catch (Exception ex)
         {
-            _monitor.Log($"[BundleScanner] CustomBush cache hatası: {ex.Message}", LogLevel.Trace);
+            _monitor.Log($"[BundleScanner] CustomBush cache hatasÄ±: {ex.Message}", LogLevel.Trace);
         }
     }
 

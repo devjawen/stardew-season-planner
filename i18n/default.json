@@ -30,13 +30,13 @@
   "season.fall": "Fall",
   "season.winter": "Winter",
 
-  "tooltip.required_for": "✦ Required for {{bundle}}!",
+  "tooltip.required_for": ">> Required for {{bundle}}!",
   "tooltip.category_amount": "  {{category}}  |  Need: {{qty}}x",
   "tooltip.quality_suffix": " ({{quality}})",
   "tooltip.season": "  Season: {{season}}",
   "tooltip.grow_deadline": "  Grow: {{days}}d  |  Last Plant: Day {{day}}",
-  "tooltip.rain_fish": "  ☔ Caught in rainy weather",
-  "tooltip.shop_source": "  🛒 Sold at {{shop}}",
+  "tooltip.rain_fish": "  (rain) Caught in rainy weather",
+  "tooltip.shop_source": "  Sold at {{shop}}",
 
   "category.crop": "Crop",
   "category.fish": "Fish",
@@ -45,9 +45,9 @@
   "category.forage": "Forage",
   "category.other": "Other",
 
-  "hud.planting_today": "TODAY is the last day! Plant {{item}} — {{bundle}}",
-  "hud.planting_warning": "Warning: Last planting day for {{item}} is day {{day}}. ({{days}}d left) — {{bundle}}",
-  "hud.rain_fish": "☔ Tomorrow is great for {{item}}! — {{bundle}}",
+  "hud.planting_today": "TODAY is the last day! Plant {{item}} -- {{bundle}}",
+  "hud.planting_warning": "Warning: Last planting day for {{item}} is day {{day}}. ({{days}}d left) -- {{bundle}}",
+  "hud.rain_fish": "(rain) Tomorrow is great for {{item}}! -- {{bundle}}",
   "hud.planned_completed": "Completed: {{item}} delivered to {{bundle}}!",
 
   "gmcm.calendar_markers": "Calendar Markers",
@@ -115,19 +115,19 @@
   "seed.tooltip_title": "Planting Info",
   "seed.grow_days": "  Growth: {{days}} days",
   "seed.season": "  Season: {{season}}",
-  "seed.harvest_day": "  If planted today → ready Day {{day}}",
-  "seed.wont_fit": "  ✘ Won't be ready this month!",
+  "seed.harvest_day": "  If planted today -> ready Day {{day}}",
+  "seed.wont_fit": "  [X] Won't be ready this month!",
   "seed.last_plant": "  Last planting day: Day {{day}}  ({{left}}d left)",
-  "seed.last_day_passed": "  ✘ Last planting day has passed!",
-  "seed.wrong_season": "  ✘ Wrong season — cannot plant now",
-  "seed.greenhouse_available": "  🌿 Can be planted in greenhouse",
-  "seed.greenhouse_locked": "  🔒 Greenhouse not unlocked — cannot plant",
+  "seed.last_day_passed": "  [X] Last planting day has passed!",
+  "seed.wrong_season": "  [X] Wrong season -- cannot plant now",
+  "seed.greenhouse_available": "  [GH] Can be planted in greenhouse",
+  "seed.greenhouse_locked": "  [X] Greenhouse not unlocked -- cannot plant",
 
   "fruittree.tooltip_title": "Fruit Tree Sapling",
   "fruittree.product": "  Produces: {{item}}",
   "fruittree.seasons": "  Harvest season: {{seasons}}",
   "fruittree.growth": "  Full growth: 28 days",
-  "fruittree.all_season": "  🌿 Produces year-round",
+  "fruittree.all_season": "  [GH] Produces year-round",
 
   "bundle.spring_crops": "Spring Crops",
   "bundle.summer_crops": "Summer Crops",
@@ -158,6 +158,20 @@
   "bundle.the_missing": "The Missing",
 
   "search.placeholder": "Search...",
+  "cal.legend_urgent": "urgent",
   "cal.legend_soon": "soon",
-  "cal.legend_later": "later"
+  "cal.legend_later": "later",
+
+  "cal.day": "Day {{day}}",
+  "cal.today": "TODAY!",
+  "cal.days_ago": "days ago",
+  "cal.days_later": "days later",
+  "cal.last_plant_day": "Last planting day:",
+  "cal.week.mon": "Mon",
+  "cal.week.tue": "Tue",
+  "cal.week.wed": "Wed",
+  "cal.week.thu": "Thu",
+  "cal.week.fri": "Fri",
+  "cal.week.sat": "Sat",
+  "cal.week.sun": "Sun"
 }

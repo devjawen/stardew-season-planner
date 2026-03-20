@@ -219,14 +219,14 @@ public sealed class ModEntry : Mod
         if (hovered is null)
             return;
 
-        TooltipHelper.DrawBundleTooltip(b, hovered, missing, _config);
+        var allBundleItems = Scanner?.GetAllBundleItems() ?? missing;
+        TooltipHelper.DrawBundleTooltip(b, hovered, allBundleItems, _config);
     }
 
     private void CheckCompletedPlanned(IReadOnlyList<BundleItem> missing)
     {
         if (_config.PlannedItems.Count == 0) return;
 
-        // Hâlâ eksik olan itemlerin key seti
         var stillMissing = new HashSet<string>(
             missing.Select(i => $"{i.QualifiedItemId}:{i.BundleName}:{i.Quality}:{i.Quantity}"));
 
@@ -240,12 +240,10 @@ public sealed class ModEntry : Mod
         foreach (var key in completed)
         {
             _config.PlannedItems.Remove(key);
-            // key formatı: qualifiedId:bundleName:quality:quantity
             var parts = key.Split(':');
             string itemName   = parts.Length > 0 ? parts[0] : key;
             string bundleName = parts.Length > 1 ? parts[1] : string.Empty;
 
-            // İsim için missing listesinden bul, yoksa qualifiedId kullan
             var found = missing.FirstOrDefault(i =>
                 $"{i.QualifiedItemId}:{i.BundleName}:{i.Quality}:{i.Quantity}" == key);
             if (found is not null) { itemName = found.ItemName; bundleName = found.BundleName; }

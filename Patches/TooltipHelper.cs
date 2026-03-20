@@ -15,7 +15,6 @@ internal static class TooltipHelper
     private static readonly Color ColorConstruction = new(139, 90, 43);
     private static readonly Color ColorOther        = new(180, 120, 0);
 
-    // Safe separator — ASCII hyphens, no unicode box-drawing chars
     private const string Separator = "- - - - - - - - - - - - - -";
 
     internal static Color GetCategoryColor(BundleCategory cat) => cat switch
@@ -43,11 +42,8 @@ internal static class TooltipHelper
         float bundleScale = Math.Clamp(config.BundleTooltipScale / 100f, 0.50f, 2.00f);
         float seedScale   = Math.Clamp(config.SeedTooltipScale   / 100f, 0.50f, 2.00f);
 
-        // Scanner instance'ını al — instance seed cache için
         var scanner = ModEntry.Instance?.Scanner;
 
-        // Önce fidan kontrolü — (F) tipinde olduğu için Object cast'inden önce
-        // (F) prefix'li her item'ı fidan olarak kabul et (mod ağaçları dahil)
         bool isFTypeSapling = qualifiedId.StartsWith("(F)", System.StringComparison.OrdinalIgnoreCase);
         if (isFTypeSapling || (scanner is not null && scanner.IsFruitTreeSapling(qualifiedId)))
         {
@@ -70,7 +66,6 @@ internal static class TooltipHelper
             return;
         }
 
-        // Custom Bush kontrolü (Cornucopia yetiştirici/çalı itemleri)
         if (scanner is not null && scanner.IsCustomBushSapling(qualifiedId))
         {
             var bushInfo = scanner.GetCustomBushInfo(qualifiedId);
@@ -83,7 +78,6 @@ internal static class TooltipHelper
             return;
         }
 
-        // Geri kalan kontroller sadece Object tipi için
         if (hovered is not StardewValley.Object obj) return;
 
         int itemId = obj.ParentSheetIndex;
@@ -116,13 +110,11 @@ internal static class TooltipHelper
                 seasons         = season is not null ? new List<string> { season } : new List<string>();
             }
 
-            // Harvest item bundle'da var mı?
             var harvestMatches = !string.IsNullOrWhiteSpace(harvestQualified)
                 ? missing.Where(bi => string.Equals(bi.QualifiedItemId, harvestQualified,
                                     System.StringComparison.OrdinalIgnoreCase)).ToList()
                 : new List<BundleItem>();
 
-            // Legacy int fallback
             if (harvestMatches.Count == 0 && itemId > 0)
             {
                 var (_, _, legacyHarvestId) = BundleScanner.GetCropInfoFromSeed(itemId);
@@ -144,7 +136,6 @@ internal static class TooltipHelper
     {
         if (string.IsNullOrWhiteSpace(qualifiedId)) return false;
 
-        // Instance cache varsa oradan bak (hızlı)
         if (scanner is not null)
         {
             var info = scanner.GetSeedInfo(qualifiedId);
@@ -185,7 +176,6 @@ internal static class TooltipHelper
 
             if (match.Season is not null)
             {
-                // Çoklu mevsim desteği
                 string seasonText = match.Seasons.Count > 1
                     ? string.Join(", ", match.Seasons.Select(s => I18n.SeasonLabel(s)))
                     : I18n.SeasonLabel(match.Season);
@@ -277,7 +267,6 @@ internal static class TooltipHelper
 
             if (season == null)
             {
-                // Greenhouse/all-season — hasat günü hesapla
                 int harvestDay = Game1.dayOfMonth + growDays;
                 lines.Add(harvestDay <= 28
                     ? (I18n.SeedTooltipHarvestDay(harvestDay), new Color(34, 139, 34))
@@ -333,7 +322,6 @@ internal static class TooltipHelper
         const int Pad    = 12;
         const int Margin = 8;
 
-        // scale'e göre font yüksekliği
         float fontH = Game1.smallFont.MeasureString("A").Y * scale;
         int lineH   = (int)fontH + (int)(6 * scale);
         int sw      = Game1.uiViewport.Width;
@@ -365,7 +353,6 @@ internal static class TooltipHelper
 
         int x, y;
 
-        // Her zaman sol-alt köşe — vanilla tooltip pozisyonundan bağımsız
         x = marginS;
         y = sh - height - marginS;
 

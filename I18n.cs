@@ -156,6 +156,19 @@ internal static class I18n
     public static string CalLegendSoon()   => _t.Get("cal.legend_soon");
     public static string CalLegendLater()  => _t.Get("cal.legend_later");
 
+    public static string CalDay(int day)       => _t.Get("cal.day", new { day });
+    public static string CalToday()            => _t.Get("cal.today");
+    public static string CalDaysAgo()          => _t.Get("cal.days_ago");
+    public static string CalDaysLater()        => _t.Get("cal.days_later");
+    public static string CalLastPlantDay()     => _t.Get("cal.last_plant_day");
+    public static string CalWeekMon()          => _t.Get("cal.week.mon");
+    public static string CalWeekTue()          => _t.Get("cal.week.tue");
+    public static string CalWeekWed()          => _t.Get("cal.week.wed");
+    public static string CalWeekThu()          => _t.Get("cal.week.thu");
+    public static string CalWeekFri()          => _t.Get("cal.week.fri");
+    public static string CalWeekSat()          => _t.Get("cal.week.sat");
+    public static string CalWeekSun()          => _t.Get("cal.week.sun");
+
     public static string SearchPlaceholder() => _t.Get("search.placeholder");
 
 
