@@ -721,24 +721,53 @@ public sealed class BundleScanner
 
     private static string ResolveShopName(string shopId) => shopId switch
     {
-        "SeedShop"       => "Pierre",
-        "AnimalShop"     => "Marnie",
-        "FishShop"       => "Willy",
-        "ScienceHouse"   => "Robin",
-        "Blacksmith"     => "Clint",
-        "Hospital"       => "Harvey",
-        "AdventureShop"  => "Marlon",
-        "Saloon"         => "Gus",
-        "Sandy"          => "Sandy",
-        "IceCreamStand"  => "Alex",
-        "Krobus"         => "Krobus",
-        "DesertShop"     => "Sandy",
-        "HatMouse"       => "Hat Mouse",
-        "QiGemShop"      => "Qi",
-        "ResortBar"      => "Gus",
-        "VolcanoShop"    => "Volcano Shop",
-        _                => shopId,
+        "SeedShop"              => "Pierre",
+        "AnimalShop"            => "Marnie",
+        "FishShop"              => "Willy",
+        "ScienceHouse"          => "Robin",
+        "Blacksmith"            => "Clint",
+        "Hospital"              => "Harvey",
+        "AdventureShop"         => "Marlon",
+        "Saloon"                => "Gus",
+        "Sandy"                 => "Sandy",
+        "IceCreamStand"         => "Alex",
+        "Krobus"                => "Krobus",
+        "DesertShop"            => "Sandy",
+        "HatMouse"              => "Hat Mouse",
+        "QiGemShop"             => "Qi",
+        "ResortBar"             => "Gus",
+        "VolcanoShop"           => "Volcano Shop",
+        "DesertFestival_Vincent" => "Vincent",
+        "DesertFestival_Sophia" => "Sophia",
+        "DesertFestival"        => "Desert Festival",
+        "WizardShop"            => "Wizard",
+        "TravelingMerchant"     => "Traveling Merchant",
+        "Dwarf"                 => "Dwarf",
+        "Marlon"                => "Marlon",
+        "Pierre"                => "Pierre",
+        _                       => PrettifyShopId(shopId),
     };
+
+    private static string PrettifyShopId(string shopId)
+    {
+        if (string.IsNullOrWhiteSpace(shopId)) return shopId;
+
+        int dotIdx = shopId.LastIndexOf('.');
+        string name = dotIdx >= 0 ? shopId[(dotIdx + 1)..] : shopId;
+
+        name = name.Replace('_', ' ');
+
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < name.Length; i++)
+        {
+            char c = name[i];
+            if (i > 0 && char.IsUpper(c) && !char.IsUpper(name[i - 1]) && name[i - 1] != ' ')
+                result.Append(' ');
+            result.Append(c);
+        }
+
+        return result.ToString().Trim();
+    }
 
     private string? ResolveShopSource(string qualifiedId, int legacyId)
     {
