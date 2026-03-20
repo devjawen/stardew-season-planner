@@ -6,6 +6,10 @@
   "panel.show_planned": "Show planned only",
   "panel.clear_planned": "Clear planned",
   "panel.items_count": "{{count}} items",
+  "panel.log_btn": "Log",
+  "panel.log_title": "Notification Log",
+  "panel.log_empty": "No notifications yet.",
+  "panel.log_close": "Close",
 
   "tab.all": "All",
   "tab.crop": "Crop",

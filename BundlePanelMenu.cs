@@ -107,6 +107,14 @@ public sealed class BundlePanelMenu : IClickableMenu
     private List<BundleItem>                   _vis     = new();
     private IReadOnlyList<BundleItem>          _allSeasonal = Array.Empty<BundleItem>();
 
+    private bool _showLog;
+    private int  _logScroll;
+    private Rectangle _logBtnRect;
+
+    private static readonly Color CLogPlant  = new(192, 24,  24);
+    private static readonly Color CLogRain   = new(30,  100, 200);
+    private static readonly Color CLogQuest  = new(24,  108, 24);
+
     private int _px, _py;
     private int _barY, _chipY, _sortY;
     private Rectangle[] _chipRects = new Rectangle[4];
@@ -334,6 +342,8 @@ public sealed class BundlePanelMenu : IClickableMenu
         DrawScrollBar(b);
         DrawFooter(b);
         DrawHoverTooltip(b);
+
+        if (_showLog) DrawLogOverlay(b);
 
         upperRightCloseButton?.draw(b);
         drawMouse(b);
@@ -799,11 +809,99 @@ public sealed class BundlePanelMenu : IClickableMenu
             new Vector2(_lX, fy + (FootH - csv.Y) / 2f),
             CSub, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
 
+        string logLbl = I18n.PanelLogBtn();
+        Vector2 llv   = Game1.dialogueFont.MeasureString(logLbl) * FSmall;
+        int lbW = (int)llv.X + 12, lbH = (int)llv.Y + 6;
+        int lbX = _lX + (int)csv.X + 16;
+        int lbY = fy + (FootH - lbH) / 2;
+        _logBtnRect = new Rectangle(lbX, lbY, lbW, lbH);
+        Color logBg  = _showLog ? CInk * 0.75f : CDiv * 0.28f;
+        Color logBrd = _showLog ? CInk          : CDiv * 0.50f;
+        Color logTc  = _showLog ? Color.White   : CSub;
+        b.Draw(Game1.staminaRect, _logBtnRect, logBg);
+        DrawRect(b, lbX, lbY, lbW, lbH, logBrd);
+        b.DrawString(Game1.dialogueFont, logLbl,
+            new Vector2(lbX + 6, lbY + (lbH - llv.Y) / 2f),
+            logTc, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
+
         string hint = I18n.PanelFooterHint();
         Vector2 hsv = Game1.dialogueFont.MeasureString(hint) * FSmall;
         b.DrawString(Game1.dialogueFont, hint,
             new Vector2(_px + PW - hsv.X - Pad, fy + (FootH - hsv.Y) / 2f),
             CSub, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
+    }
+
+    private void DrawLogOverlay(SpriteBatch b)
+    {
+        var log = ModEntry.GetNotificationLog();
+
+        int ow = Math.Min(PW - Pad * 2, 560);
+        int oh = Math.Min(PH - HeadH - FootH - Pad * 2, 340);
+        int ox = _px + (PW - ow) / 2;
+        int oy = _py + HeadH + (PH - HeadH - FootH - oh) / 2;
+
+        b.Draw(Game1.staminaRect, new Rectangle(ox + 4, oy + 4, ow, oh), Color.Black * 0.32f);
+        drawTextureBox(b, Game1.menuTexture, new Rectangle(0, 256, 60, 60),
+            ox, oy, ow, oh, Color.White, drawShadow: false);
+        b.Draw(Game1.staminaRect, new Rectangle(ox + 6, oy + 6, ow - 12, oh - 12),
+            new Color(252, 244, 224) * 0.96f);
+
+        string title = I18n.PanelLogTitle();
+        Vector2 tv   = Game1.dialogueFont.MeasureString(title) * FMid;
+        b.DrawString(Game1.dialogueFont, title,
+            new Vector2(ox + (ow - tv.X) / 2f, oy + 10),
+            CInk, 0f, Vector2.Zero, FMid, SpriteEffects.None, 0f);
+
+        b.Draw(Game1.staminaRect,
+            new Rectangle(ox + Pad, oy + (int)tv.Y + 14, ow - Pad * 2, 1), CDiv * 0.50f);
+
+        int closeW = (int)(Game1.dialogueFont.MeasureString(I18n.PanelLogClose()).X * FSmall) + 12;
+        int closeH = (int)(Game1.dialogueFont.MeasureString("A").Y * FSmall) + 8;
+        int closeX = ox + ow - closeW - 10;
+        int closeY = oy + 8;
+        b.Draw(Game1.staminaRect, new Rectangle(closeX, closeY, closeW, closeH), CDiv * 0.35f);
+        DrawRect(b, closeX, closeY, closeW, closeH, CDiv * 0.70f);
+        b.DrawString(Game1.dialogueFont, I18n.PanelLogClose(),
+            new Vector2(closeX + 6, closeY + (closeH - Game1.dialogueFont.MeasureString("A").Y * FSmall) / 2f),
+            CSub, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
+
+        int listTop  = oy + (int)tv.Y + 20;
+        int listH    = oh - (int)tv.Y - 30;
+        float lineH  = Game1.dialogueFont.MeasureString("A").Y * FSmall + 4f;
+        int visCount = (int)(listH / lineH);
+
+        if (log.Count == 0)
+        {
+            string empty = I18n.PanelLogEmpty();
+            Vector2 ev   = Game1.dialogueFont.MeasureString(empty) * FSmall;
+            b.DrawString(Game1.dialogueFont, empty,
+                new Vector2(ox + (ow - ev.X) / 2f, listTop + listH / 2f - ev.Y / 2f),
+                CSub * 0.60f, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
+            return;
+        }
+
+        _logScroll = Math.Clamp(_logScroll, 0, Math.Max(0, log.Count - visCount));
+
+        b.End();
+        b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend,
+            SamplerState.PointClamp, null,
+            new RasterizerState { ScissorTestEnable = true });
+        b.GraphicsDevice.ScissorRectangle = new Rectangle(ox + Pad, listTop, ow - Pad * 2, listH);
+
+        for (int i = _logScroll; i < log.Count && i < _logScroll + visCount; i++)
+        {
+            var (msg, type) = log[i];
+            float iy = listTop + (i - _logScroll) * lineH;
+            Color tc = type == HUDMessage.error_type    ? CLogPlant
+                     : type == HUDMessage.newQuest_type ? CLogQuest
+                     : CInk;
+            b.DrawString(Game1.dialogueFont, msg,
+                new Vector2(ox + Pad + 4, iy),
+                tc, 0f, Vector2.Zero, FSmall, SpriteEffects.None, 0f);
+        }
+
+        b.End();
+        b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
     }
 
     private void DrawHoverTooltip(SpriteBatch b)
@@ -934,13 +1032,61 @@ public sealed class BundlePanelMenu : IClickableMenu
 
 
     public override void receiveScrollWheelAction(int direction)
-        => _scroll = Math.Clamp(_scroll - Math.Sign(direction), 0, MaxScr);
+    {
+        if (_showLog)
+        {
+            var log = ModEntry.GetNotificationLog();
+            int ow = Math.Min(PW - Pad * 2, 560);
+            int oh = Math.Min(PH - HeadH - FootH - Pad * 2, 340);
+            float lineH = Game1.dialogueFont.MeasureString("A").Y * FSmall + 4f;
+            int visCount = (int)((oh - Game1.dialogueFont.MeasureString("A").Y * FMid - 30) / lineH);
+            _logScroll = Math.Clamp(_logScroll - Math.Sign(direction), 0, Math.Max(0, log.Count - visCount));
+            return;
+        }
+        _scroll = Math.Clamp(_scroll - Math.Sign(direction), 0, MaxScr);
+    }
 
     public override void receiveLeftClick(int x, int y, bool playSound = true)
     {
         if (upperRightCloseButton is not null && upperRightCloseButton.containsPoint(x, y))
         {
             exitThisMenu();
+            return;
+        }
+
+        if (_showLog)
+        {
+            var log = ModEntry.GetNotificationLog();
+            int ow = Math.Min(PW - Pad * 2, 560);
+            int oh = Math.Min(PH - HeadH - FootH - Pad * 2, 340);
+            int ox = _px + (PW - ow) / 2;
+            int oy = _py + HeadH + (PH - HeadH - FootH - oh) / 2;
+
+            float titleH = Game1.dialogueFont.MeasureString("A").Y * FMid;
+            int closeW = (int)(Game1.dialogueFont.MeasureString(I18n.PanelLogClose()).X * FSmall) + 12;
+            int closeH = (int)(Game1.dialogueFont.MeasureString("A").Y * FSmall) + 8;
+            int closeX = ox + ow - closeW - 10;
+            int closeY = oy + 8;
+
+            if (x >= closeX && x <= closeX + closeW && y >= closeY && y <= closeY + closeH)
+            {
+                _showLog = false;
+                Game1.playSound("smallSelect");
+                return;
+            }
+
+            if (x >= ox && x <= ox + ow && y >= oy && y <= oy + oh)
+                return;
+
+            _showLog = false;
+            return;
+        }
+
+        if (_logBtnRect.Contains(x, y))
+        {
+            _showLog = !_showLog;
+            _logScroll = 0;
+            Game1.playSound("smallSelect");
             return;
         }
 

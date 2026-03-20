@@ -18,6 +18,10 @@ internal static class I18n
         _t.Get("panel.items_count", new { count });
     public static string PanelShowPlanned()   => _t.Get("panel.show_planned");
     public static string PanelClearPlanned()  => _t.Get("panel.clear_planned");
+    public static string PanelLogBtn()        => _t.Get("panel.log_btn");
+    public static string PanelLogTitle()      => _t.Get("panel.log_title");
+    public static string PanelLogEmpty()      => _t.Get("panel.log_empty");
+    public static string PanelLogClose()      => _t.Get("panel.log_close");
 
     public static string TabAll()          => _t.Get("tab.all");
     public static string TabCrop()         => _t.Get("tab.crop");

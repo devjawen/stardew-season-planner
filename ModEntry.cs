@@ -25,6 +25,28 @@ public sealed class ModEntry : Mod
     private readonly object _stateLock = new();
     private IReadOnlyList<BundleItem> _latestMissing = Array.Empty<BundleItem>();
 
+    private readonly object _logLock = new();
+    private readonly List<(string message, int type)> _notificationLog = new();
+    private const int MaxLogEntries = 50;
+
+    internal static IReadOnlyList<(string message, int type)> GetNotificationLog()
+    {
+        var instance = Instance;
+        if (instance is null) return Array.Empty<(string, int)>();
+        lock (instance._logLock)
+            return instance._notificationLog.ToList();
+    }
+
+    private void AddToLog(string message, int type)
+    {
+        lock (_logLock)
+        {
+            _notificationLog.Insert(0, (message, type));
+            if (_notificationLog.Count > MaxLogEntries)
+                _notificationLog.RemoveAt(_notificationLog.Count - 1);
+        }
+    }
+
     public override void Entry(IModHelper helper)
     {
         Instance = this;
@@ -250,6 +272,7 @@ public sealed class ModEntry : Mod
             Game1.addHUDMessage(new HUDMessage(
                 I18n.HudPlannedCompleted(itemName, bundleName),
                 HUDMessage.newQuest_type));
+            AddToLog(I18n.HudPlannedCompleted(itemName, bundleName), HUDMessage.newQuest_type);
         }
 
         if (completed.Count > 0)
@@ -277,6 +300,7 @@ public sealed class ModEntry : Mod
                 : I18n.HudPlantingWarning(item.ItemName, lastPlantDay, daysLeft, item.BundleName);
 
             Game1.addHUDMessage(new HUDMessage(msg, HUDMessage.error_type));
+            AddToLog(msg, HUDMessage.error_type);
         }
     }
 
@@ -295,6 +319,7 @@ public sealed class ModEntry : Mod
             Game1.addHUDMessage(new HUDMessage(
                 I18n.HudRainFish(item.ItemName, item.BundleName),
                 HUDMessage.newQuest_type));
+            AddToLog(I18n.HudRainFish(item.ItemName, item.BundleName), HUDMessage.newQuest_type);
             break;
         }
     }

@@ -6,6 +6,10 @@
   "panel.show_planned": "Sadece planlanmışları göster",
   "panel.clear_planned": "Planlanmışları temizle",
   "panel.items_count": "{{count}} eşya",
+  "panel.log_btn": "Log",
+  "panel.log_title": "Bildirim Geçmişi",
+  "panel.log_empty": "Henüz bildirim yok.",
+  "panel.log_close": "Kapat",
 
   "tab.all": "Tümü",
   "tab.crop": "Ürün",
