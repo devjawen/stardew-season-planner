@@ -240,8 +240,18 @@ public sealed class ModEntry : Mod
         }
         else if (_config.ShowInventoryTooltips && menu is StardewValley.Menus.MuseumMenu museumMenu)
         {
+            int mx = Game1.getMouseX(true);
+            int my = Game1.getMouseY(true);
+
             var museumHovered = museumMenu.hoveredItem
-                ?? museumMenu.inventory?.hover(Game1.getMouseX(true), Game1.getMouseY(true), null);
+                ?? museumMenu.inventory?.hover(mx, my, null);
+
+            if (museumHovered is null && museumMenu.inventory is not null)
+            {
+                mx = Game1.getMouseX();
+                my = Game1.getMouseY();
+                museumHovered = museumMenu.inventory.hover(mx, my, null);
+            }
 
             if (museumHovered is not null)
             {

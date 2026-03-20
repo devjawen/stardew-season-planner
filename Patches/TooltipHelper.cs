@@ -385,29 +385,23 @@ internal static class TooltipHelper
         var lines = new List<(string text, Color color)>();
         lines.Add((I18n.MuseumTooltipTitle(), new Color(120, 80, 20)));
 
-        if (alreadyDonated)
-            lines.Add((I18n.MuseumDonated(), new Color(34, 139, 34)));
-        else
-            lines.Add((I18n.MuseumNeeded(), new Color(220, 80, 0)));
+        lines.Add(alreadyDonated
+            ? (I18n.MuseumDonated(), new Color(34, 139, 34))
+            : (I18n.MuseumNeeded(), new Color(220, 80, 0)));
 
-        int category = hovered is StardewValley.Object o ? o.Category : 0;
-        bool isMineral = category == StardewValley.Object.GemCategory
-                      || category == StardewValley.Object.mineralsCategory
-                      || IsMuseumMineral(hovered.ItemId);
-
-        if (isMineral)
-            lines.Add((I18n.MuseumCategoryMineral(), new Color(160, 80, 200)));
-        else
-            lines.Add((I18n.MuseumCategoryArtifact(), new Color(160, 120, 40)));
+        bool isMineral = IsMuseumMineral(hovered);
+        lines.Add(isMineral
+            ? (I18n.MuseumCategoryMineral(), new Color(160, 80, 200))
+            : (I18n.MuseumCategoryArtifact(), new Color(160, 120, 40)));
 
         var sources = GetMuseumItemSources(hovered);
         foreach (var src in sources)
             lines.Add((src, new Color(100, 140, 100)));
 
-        int totalPieces = GetMuseumTotalCount();
-        int donatedCount = GetMuseumDonatedCount();
-        if (totalPieces > 0)
-            lines.Add((I18n.MuseumProgress(donatedCount, totalPieces), new Color(150, 150, 150)));
+        int donatedCount = lib.museumPieces.Count();
+        int totalCount   = GetMuseumTotalCount(lib);
+        if (totalCount > 0)
+            lines.Add((I18n.MuseumProgress(donatedCount, totalCount), new Color(150, 150, 150)));
 
         var bundleMatches = missing.Where(bi => bi.MatchesItem(hovered)).ToList();
         if (bundleMatches.Count > 0)
@@ -419,13 +413,27 @@ internal static class TooltipHelper
         DrawBox(b, lines, 0, scale);
     }
 
-    private static bool IsMuseumMineral(string itemId)
+    private static bool IsMuseumMineral(Item item)
     {
+        if (item is not StardewValley.Object obj) return false;
+
+        if (obj.Category == StardewValley.Object.GemCategory
+         || obj.Category == StardewValley.Object.mineralsCategory)
+            return true;
+
+        var tags = item.GetContextTags();
+        if (tags is not null)
+        {
+            if (tags.Contains("item_type_minerals") || tags.Contains("geode_item")
+             || tags.Contains("mineral_item"))
+                return true;
+        }
+
         try
         {
-            var minerals = Game1.content.Load<Dictionary<string,
+            var objects = Game1.content.Load<Dictionary<string,
                 StardewValley.GameData.Objects.ObjectData>>("Data/Objects");
-            if (minerals.TryGetValue(itemId, out var data))
+            if (objects.TryGetValue(item.ItemId, out var data))
                 return data.Category == StardewValley.Object.GemCategory
                     || data.Category == StardewValley.Object.mineralsCategory;
         }
@@ -436,80 +444,68 @@ internal static class TooltipHelper
     private static List<string> GetMuseumItemSources(Item item)
     {
         var sources = new List<string>();
+        var tags = item.GetContextTags() ?? new HashSet<string>();
+
+        if (tags.Any(t => t.StartsWith("geode_item") || t == "dropped_from_mine"
+                       || t == "mine_item" || t.Contains("mine_treasure")))
+            sources.Add(I18n.MuseumSourceMine());
+
+        if (tags.Any(t => t == "fish_item" || t.StartsWith("fish_")))
+            sources.Add(I18n.MuseumSourceFishing());
+
+        if (tags.Any(t => t == "artifact_item" || t == "item_type_arch"
+                       || t.Contains("artifact_spot")))
+            sources.Add(I18n.MuseumSourceArtifactSpot());
+
+        if (tags.Any(t => t == "pan_item" || t.Contains("panning")))
+            sources.Add(I18n.MuseumSourcePanning());
+
+        if (tags.Any(t => t == "monster_item" || t.Contains("monster_drop")))
+            sources.Add(I18n.MuseumSourceMonster());
+
+        if (sources.Count == 0)
+        {
+            try
+            {
+                var objects = Game1.content.Load<Dictionary<string,
+                    StardewValley.GameData.Objects.ObjectData>>("Data/Objects");
+                if (objects.TryGetValue(item.ItemId, out var data))
+                {
+                    var ctxTags = data.ContextTags ?? new List<string>();
+                    string allTags = string.Join(" ", ctxTags).ToLowerInvariant();
+                    string desc    = (data.Description ?? string.Empty).ToLowerInvariant();
+
+                    if (allTags.Contains("geode") || desc.Contains("geode")
+                     || desc.Contains("mine") || allTags.Contains("mine"))
+                        sources.Add(I18n.MuseumSourceMine());
+                    if (allTags.Contains("artifact") || desc.Contains("artifact")
+                     || desc.Contains("ancient") || desc.Contains("buried"))
+                        sources.Add(I18n.MuseumSourceArtifactSpot());
+                    if (allTags.Contains("fish") || desc.Contains("fish"))
+                        sources.Add(I18n.MuseumSourceFishing());
+                    if (allTags.Contains("pan") || desc.Contains("pan"))
+                        sources.Add(I18n.MuseumSourcePanning());
+                }
+            }
+            catch { }
+        }
+
+        return sources;
+    }
+
+    private static int GetMuseumTotalCount(StardewValley.Locations.LibraryMuseum lib)
+    {
         try
         {
             var objects = Game1.content.Load<Dictionary<string,
                 StardewValley.GameData.Objects.ObjectData>>("Data/Objects");
-            string rawId = item.ItemId;
-            if (!objects.TryGetValue(rawId, out var data)) return sources;
-
-            string desc = data.Description?.ToLower() ?? string.Empty;
-            string ctx  = string.Join(" ", data.ContextTags ?? new List<string>()).ToLower();
-            string combined = desc + " " + ctx;
-
-            if (combined.Contains("mine") || combined.Contains("maden") || combined.Contains("geode"))
-                sources.Add(I18n.MuseumSourceMine());
-            if (combined.Contains("fish") || combined.Contains("balik") || combined.Contains("fishing"))
-                sources.Add(I18n.MuseumSourceFishing());
-            if (combined.Contains("artifact") || combined.Contains("artefakt") || combined.Contains("digging") || combined.Contains("hoe"))
-                sources.Add(I18n.MuseumSourceArtifactSpot());
-            if (combined.Contains("pan") || combined.Contains("panning"))
-                sources.Add(I18n.MuseumSourcePanning());
-            if (combined.Contains("monster") || combined.Contains("drop") || combined.Contains("enemy"))
-                sources.Add(I18n.MuseumSourceMonster());
-        }
-        catch { }
-        return sources;
-    }
-
-    private static int GetMuseumTotalCount()
-    {
-        try
-        {
-            var lib = Game1.getLocationFromName("ArchaeologyHouse");
-            if (lib is null) return 0;
-
-            foreach (var methodName in new[] { "numberOfMuseumItemsTotal", "getNumberOfMuseumItemsTotal", "GetNumberOfMuseumItemsTotal" })
-            {
-                var m = lib.GetType().GetMethod(methodName,
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                if (m is not null && m.Invoke(lib, null) is int v)
-                    return v;
-            }
-
-            var field = lib.GetType().GetField("museumPieces",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            if (field?.GetValue(lib) is System.Collections.IDictionary dict)
-                return dict.Count > 0 ? 95 : 0;
-
-            return 95;
+            return objects.Values.Count(d =>
+                d.Category == StardewValley.Object.GemCategory
+             || d.Category == StardewValley.Object.mineralsCategory
+             || (d.ContextTags?.Contains("artifact_item") == true)
+             || (d.ContextTags?.Contains("item_type_arch") == true));
         }
         catch { return 95; }
-    }
-
-    private static int GetMuseumDonatedCount()
-    {
-        try
-        {
-            var lib = Game1.getLocationFromName("ArchaeologyHouse");
-            if (lib is null) return 0;
-
-            foreach (var methodName in new[] { "numberOfMuseumItemsFound", "getNumberOfMuseumItemsFound", "GetNumberOfMuseumItemsFound" })
-            {
-                var m = lib.GetType().GetMethod(methodName,
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                if (m is not null && m.Invoke(lib, null) is int v)
-                    return v;
-            }
-
-            var field = lib.GetType().GetField("museumPieces",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-            if (field?.GetValue(lib) is System.Collections.IDictionary dict)
-                return dict.Count;
-
-            return 0;
-        }
-        catch { return 0; }
     }
 
     internal static void DrawCommunityTooltip(
