@@ -1,17 +1,220 @@
+<div align="center">
+
+<img src="images/1.4.0/Banner.png" alt="Season Planner Banner" width="700"/>
+
 # Season Planner & Bundle Reminder — Nexus Mods Page
 
-> Bu dosya Nexus Mods mod sayfasının açıklama içeriğidir.
-> Nexus Mods editörüne yapıştırırken BBCode bölümünü kullan.
+**Tracks every missing Community Center bundle item, marks last planting days on the in-game calendar, and shows smart tooltips on inventory, chest, shop, and Community Center screens. Never miss a deadline again.**
+
+<br/>
+
+[![SMAPI](https://img.shields.io/badge/SMAPI-4.1%2B-2b8a3e?style=flat-square)](https://smapi.io)
+[![Stardew Valley](https://img.shields.io/badge/Stardew%20Valley-1.6%2B-c0692e?style=flat-square)](https://www.stardewvalley.net/)
+[![Version](https://img.shields.io/badge/Version-1.4.0-blueviolet?style=flat-square)](manifest.json)
+[![License](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey?style=flat-square)](LICENSE)
+[![Languages](https://img.shields.io/badge/Languages-EN%20%7C%20TR-informational?style=flat-square)](#languages)
+
+</div>
 
 ---
 
-## SUMMARY (Short Description)
+> Bu dosya Nexus Mods mod sayfasının açıklama içeriğidir.
+> Nexus Mods editörüne yapıştırırken aşağıdaki BBCode bölümünü kullan.
+
+---
+
+## Short Description
 
 Tracks every missing Community Center bundle item, marks last planting days on the in-game calendar, and shows smart tooltips on inventory, chest, shop, and Community Center screens. Never miss a deadline again.
 
 ---
 
-## LONG DESCRIPTION (BBCode)
+## Features
+
+**Bundle Panel (F5)**
+Open the panel from anywhere. Items are grouped by category (Crop, Fish, Artisan, Forage, Construction, Other) and sorted by urgency. Use the search bar to filter by item name or bundle name instantly.
+
+<div align="center">
+<img src="images/1.4.0/bundlelistpaneldetails.jpg" alt="Bundle Panel Details" width="680"/>
+</div>
+
+**Calendar View**
+Switch to the calendar tab inside the panel to see a 7-column week layout. Days with planting deadlines show item count badges. Hover a day to see which items are due.
+
+<div align="center">
+<img src="images/1.4.0/bundlelistpanelcalendar.jpg" alt="Calendar View" width="680"/>
+</div>
+
+**Planning System**
+Mark any item as "planned". Filter the list to planned-only view. When a planned item is delivered to the Community Center, you get a HUD notification.
+
+<div align="center">
+<img src="images/1.4.0/bundlelistpanelplanned.jpg" alt="Planned Items" width="680"/>
+</div>
+
+**Inventory & Chest Tooltips**
+Hover any item in your inventory or a chest to see which bundle it belongs to, how many are needed, quality requirements, and grow/season info.
+
+<div align="center">
+<img src="images/1.4.0/inventorytooltip.jpg" alt="Inventory Tooltip" width="680"/>
+</div>
+
+**Community Center Tooltips**
+Open a bundle inside the Community Center and hover the ingredient icons. A tooltip shows the bundle name, required quantity, fish location, season, time range, and weather conditions — directly on the bundle screen.
+
+<div align="center">
+<img src="images/1.4.0/communitycenter.jpg" alt="Community Center Tooltip" width="680"/>
+</div>
+
+**Shop Tooltips**
+Hover items in Pierre's, Willy's, Sandy's, Krobus's, and other shops to see bundle info without opening the panel.
+
+| Pierre's Shop | Willy's Shop | Sandy's Shop |
+|:---:|:---:|:---:|
+| ![pierre](images/1.4.0/pierreshop1.jpg) | ![willy](images/1.4.0/willys%20shop.jpg) | ![sandy](images/1.4.0/sandys%20shop.jpg) |
+
+| Krobus Shop |
+|:---:|
+| ![krobus](images/1.4.0/krabus.jpg) |
+
+**HUD Alerts**
+Every morning the mod checks:
+- Planting deadlines — warns you X days before the last day to plant a crop needed for a bundle
+- Rain fish — if it will rain tomorrow and you still need a rain-only fish, you get a heads-up the night before
+- Planned item completed — notifies you when a planned item is delivered
+
+**Seed & Fruit Tree Tooltips**
+Hover any seed or fruit tree sapling to see grow time, season, last planting day, and whether a greenhouse is available.
+
+**Notification Log**
+Inside the bundle panel, open the Log tab to review all past HUD notifications from the current session.
+
+**Settings (Generic Mod Config Menu)**
+
+<div align="center">
+<img src="images/1.4.0/genericmodmenusettings.jpg" alt="GMCM Settings" width="680"/>
+</div>
+
+---
+
+## What's New in 1.4.0
+
+- **Search bar** — filter the bundle panel by item name or bundle name in real time
+- **Detailed calendar** — 7-column week layout with item count badges and hover tooltips
+- **Community Center tooltips** — hover ingredient icons inside a bundle to see fish location, season, time, and weather info
+- **Completed bundle items** — tooltips now show a green "Delivered" line for already-completed items
+- **Notification log** — review past HUD alerts inside the panel
+- **Mod fish support** — fish from modded locations (SVE, etc.) now show correct location data
+- **Bilingual SMAPI logs** — all console messages shown in both Turkish and English
+- **Bundle cache fix** — completed slots tracked correctly, no false "missing" items
+- **Full i18n** — every string goes through the translation system
+
+---
+
+## Installation
+
+**Requirements**
+- Stardew Valley `1.6+`
+- [SMAPI](https://smapi.io) `4.1+`
+- [Generic Mod Config Menu](https://www.nexusmods.com/stardewvalley/mods/5098) *(optional)*
+
+**Steps**
+1. Download the latest zip from the Files tab
+2. Extract into your `Stardew Valley/Mods/` folder
+3. Launch the game through SMAPI
+
+---
+
+## Controls
+
+| Input | Action |
+|---|---|
+| `F5` | Open / close the bundle panel |
+| `ESC` or right-click | Close the panel |
+| Scroll wheel | Navigate the item list |
+| Click a tab | Filter by category |
+| Type in search box | Filter by item or bundle name |
+| Click "Plan" | Mark an item as planned |
+| Drag panel header | Reposition the panel |
+
+---
+
+## Configuration
+
+| Setting | Default | Description |
+|---|:---:|---|
+| Show Calendar Markers | on | Highlight last planting days on the calendar |
+| Show HUD Notifications | on | Morning alerts for deadlines and rain fish |
+| Show Inventory Tooltips | on | Bundle info on hovered inventory items |
+| Show Chest Tooltips | on | Bundle info on hovered chest items |
+| Show Shop Source | on | Where to buy items, shown in tooltips |
+| Filter Construction Items | on | Hide Wood/Stone/etc. from the panel |
+| Warning Threshold (Days) | `7` | Days before deadline to start warning |
+| Panel Hotkey | `F5` | Key to open/close the bundle panel |
+| Panel Size (%) | `100` | Scale the bundle panel (50-150%) |
+| Bundle Tooltip Size (%) | `100` | Scale the bundle info tooltip (50-200%) |
+| Seed Tooltip Size (%) | `100` | Scale the planting info tooltip (50-200%) |
+
+---
+
+## Mod Compatibility
+
+The mod reads `Data/Bundles`, `Data/Crops`, `Data/Shops`, `Data/Fish`, and `Data/Locations` through SMAPI's content API, so any mod that patches those assets is automatically supported.
+
+| Mod | Support |
+|---|---|
+| Content Patcher | Full |
+| Stardew Valley Expanded | Full |
+| Cornucopia -- More Crops | Full |
+| Cornucopia -- Cooking Recipes | Full |
+| Bonster's Crops | Full |
+| Culinary Delight | Full |
+| Better Things | Full |
+| Json Assets | Full |
+| Dynamic Game Assets | Full |
+| Generic Mod Config Menu | Full |
+
+---
+
+## Languages
+
+| Language | File | Status |
+|---|---|:---:|
+| English | `i18n/default.json` | done |
+| Turkce | `i18n/tr.json` | done |
+| *Your language?* | `i18n/xx.json` | open |
+
+---
+
+## Images (Upload Order for Nexus)
+
+Nexus Mods'a bu sırayla yükle:
+
+1. `images/1.4.0/Banner.png` — Ana banner
+2. `images/1.4.0/Banner2.png` — İkinci banner
+3. `images/1.4.0/bundlelistpaneldetails.jpg` — Bundle panel detay
+4. `images/1.4.0/bundlelistpanelcalendar.jpg` — Takvim görünümü
+5. `images/1.4.0/bundlelistpanelplanned.jpg` — Planlanan itemlar
+6. `images/1.4.0/inventorytooltip.jpg` — Envanter tooltip
+7. `images/1.4.0/communitycenter.jpg` — Community Center tooltip
+8. `images/1.4.0/pierreshop1.jpg` — Pierre dükkanı
+9. `images/1.4.0/willys shop.jpg` — Willy dükkanı
+10. `images/1.4.0/sandys shop.jpg` — Sandy dükkanı
+11. `images/1.4.0/krabus.jpg` — Krobus dükkanı
+12. `images/1.4.0/genericmodmenusettings.jpg` — GMCM ayarlar
+
+---
+
+## Tags (Nexus Mods)
+
+`Gameplay Mechanics` · `User Interface` · `Quality of Life` · `Utilities` · `HUD and UI`
+
+---
+
+## BBCode (Nexus Mods Editörüne Yapıştır)
+
+<details>
+<summary>BBCode içeriğini göster</summary>
 
 ```bbcode
 [center][img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/Banner.png[/img][/center]
@@ -64,12 +267,10 @@ Open a bundle inside the Community Center and hover the ingredient icons. A tool
 [b]Shop Tooltips[/b]
 Hover items in Pierre's, Willy's, Sandy's, Krobus's, and other shops to see bundle info without opening the panel.
 
-[center]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/pierreshop1.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/willys shop.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/sandys shop.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/willys%20shop.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/sandys%20shop.jpg[/img]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/krabus.jpg[/img]
-[/center]
 
 [b]HUD Alerts[/b]
 Every morning the mod checks:
@@ -114,13 +315,13 @@ All options are configurable in-game via GMCM.
 [list]
 [*] Stardew Valley 1.6+
 [*] [url=https://smapi.io]SMAPI 4.1+[/url]
-[*] [url=https://www.nexusmods.com/stardewvalley/mods/5098]Generic Mod Config Menu[/url] (optional, for in-game settings)
+[*] [url=https://www.nexusmods.com/stardewvalley/mods/5098]Generic Mod Config Menu[/url] (optional)
 [/list]
 
 [b]Steps[/b]
 [list=1]
 [*] Download the latest zip from the Files tab
-[*] Extract into your [font=Courier New]Stardew Valley/Mods/[/font] folder
+[*] Extract into your Stardew Valley/Mods/ folder
 [*] Launch the game through SMAPI
 [/list]
 
@@ -162,7 +363,7 @@ All options are configurable in-game via GMCM.
 
 [size=4][b]Mod Compatibility[/b][/size]
 
-The mod reads [font=Courier New]Data/Bundles[/font], [font=Courier New]Data/Crops[/font], [font=Courier New]Data/Shops[/font], [font=Courier New]Data/Fish[/font], and [font=Courier New]Data/Locations[/font] through SMAPI's content API, so any mod that patches those assets is automatically supported.
+The mod reads Data/Bundles, Data/Crops, Data/Shops, Data/Fish, and Data/Locations through SMAPI's content API, so any mod that patches those assets is automatically supported.
 
 [table]
 [tr][th]Mod[/th][th]Support[/th][/tr]
@@ -185,7 +386,7 @@ The mod reads [font=Courier New]Data/Bundles[/font], [font=Courier New]Data/Crop
 [list]
 [*] English (default)
 [*] Turkce / Turkish (tr)
-[*] Want to add your language? Copy [font=Courier New]i18n/default.json[/font], translate the values, and submit a PR on GitHub.
+[*] Want to add your language? Copy i18n/default.json, translate the values, and submit a PR on GitHub.
 [/list]
 
 [line]
@@ -209,33 +410,10 @@ The mod reads [font=Courier New]Data/Bundles[/font], [font=Courier New]Data/Crop
 [center][size=1]Made with coffee by [url=https://github.com/devjawen]Jawen[/url][/size][/center]
 ```
 
----
-
-## IMAGES (Upload Order for Nexus)
-
-Nexus Mods'a bu sırayla yükle:
-
-1. `images/1.4.0/Banner.png` — Ana banner (mod sayfası başlığı)
-2. `images/1.4.0/Banner2.png` — İkinci banner
-3. `images/1.4.0/bundlelistpaneldetails.jpg` — Bundle panel detay görünümü
-4. `images/1.4.0/bundlelistpanelcalendar.jpg` — Takvim görünümü
-5. `images/1.4.0/bundlelistpanelplanned.jpg` — Planlanan itemlar
-6. `images/1.4.0/inventorytooltip.jpg` — Envanter tooltip
-7. `images/1.4.0/communitycenter.jpg` — Community Center tooltip
-8. `images/1.4.0/pierreshop1.jpg` — Pierre dükkanı tooltip
-9. `images/1.4.0/willys shop.jpg` — Willy dükkanı tooltip
-10. `images/1.4.0/sandys shop.jpg` — Sandy dükkanı tooltip
-11. `images/1.4.0/krabus.jpg` — Krobus dükkanı tooltip
-12. `images/1.4.0/genericmodmenusettings.jpg` — GMCM ayarlar ekranı
+</details>
 
 ---
 
-## TAGS (Nexus Mods)
-
-Önerilen etiketler:
-- Gameplay Mechanics
-- User Interface
-- Quality of Life
-- Cheats and God Modes (hayır, bu değil)
-- Utilities
-- HUD and UI
+<div align="center">
+  <sub>Made with coffee by <a href="https://github.com/devjawen"><b>Jawen</b></a></sub>
+</div>
