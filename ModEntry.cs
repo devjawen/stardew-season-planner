@@ -215,15 +215,15 @@ public sealed class ModEntry : Mod
 
         if (menu is StardewValley.Menus.GameMenu gm2
             && gm2.pages.Any(p => p is StardewValley.Menus.ShopMenu))
-        {
             return;
-        }
 
         if (!TryGetSharedState(out var missing, out _))
             return;
 
-        Item? hovered = null;
+        if (menu is StardewValley.Menus.MuseumMenu || menu.GetType().Name.Contains("Museum"))
+            Monitor.Log($"[MUS-DBG] active menu = {menu.GetType().FullName}", LogLevel.Debug);
 
+        Item? hovered = null;
         if (_config.ShowInventoryTooltips
             && menu is StardewValley.Menus.GameMenu gm
             && gm.currentTab == StardewValley.Menus.GameMenu.inventoryTab
@@ -243,11 +243,9 @@ public sealed class ModEntry : Mod
             int mx = Game1.getMouseX(true);
             int my = Game1.getMouseY(true);
 
-            Item? museumHovered = museumMenu.hoveredItem;
-
-            if (museumHovered is null && museumMenu.inventory is not null)
-                museumHovered = museumMenu.inventory.getItemAt(mx, my)
-                             ?? museumMenu.inventory.getItemAt(Game1.getMouseX(), Game1.getMouseY());
+            Item? museumHovered = museumMenu.hoveredItem
+                ?? museumMenu.inventory?.getItemAt(mx, my)
+                ?? museumMenu.inventory?.getItemAt(Game1.getMouseX(), Game1.getMouseY());
 
             if (museumHovered is not null)
             {
@@ -259,7 +257,8 @@ public sealed class ModEntry : Mod
         if (hovered is null)
             return;
 
-        TooltipHelper.DrawBundleTooltip(b, hovered, missing, _config);
+        if (!TooltipHelper.DrawMuseumTooltip(b, hovered, missing, _config))
+            TooltipHelper.DrawBundleTooltip(b, hovered, missing, _config);
     }
 
     private void CheckCompletedPlanned(IReadOnlyList<BundleItem> missing)

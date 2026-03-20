@@ -365,7 +365,7 @@ internal static class TooltipHelper
         DrawBox(b, lines, vanillaTooltipWidth, seedScale);
     }
 
-    internal static void DrawMuseumTooltip(
+    internal static bool DrawMuseumTooltip(
         SpriteBatch b,
         Item hovered,
         IReadOnlyList<BundleItem> missing,
@@ -375,9 +375,9 @@ internal static class TooltipHelper
 
         var lib = Game1.getLocationFromName("ArchaeologyHouse")
                   as StardewValley.Locations.LibraryMuseum;
-        if (lib is null) return;
+        if (lib is null) return false;
 
-        if (!lib.isItemSuitableForDonation(hovered)) return;
+        if (!lib.isItemSuitableForDonation(hovered)) return false;
 
         bool alreadyDonated = lib.museumPieces.Values.Any(
             v => string.Equals((string)v, hovered.ItemId, StringComparison.OrdinalIgnoreCase));
@@ -411,6 +411,7 @@ internal static class TooltipHelper
         }
 
         DrawBox(b, lines, 0, scale);
+        return true;
     }
 
     private static bool IsMuseumMineral(Item item)
