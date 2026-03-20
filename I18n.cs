@@ -183,6 +183,10 @@ internal static class I18n
 
     public static string SearchPlaceholder() => _t.Get("search.placeholder");
 
+    public static string MuseumTooltipTitle()  => _t.Get("museum.tooltip_title");
+    public static string MuseumNeeded()        => _t.Get("museum.needed");
+    public static string MuseumDonated()       => _t.Get("museum.donated");
+
 
     public static string BundleName(string key)
     {

@@ -167,6 +167,10 @@
   "bundle.the_missing": "The Missing",
 
   "search.placeholder": "Search...",
+
+  "museum.tooltip_title": "Museum Donation",
+  "museum.needed": "  [!] Not donated yet",
+  "museum.donated": "  [Done] Already donated",
   "cal.legend_urgent": "urgent",
   "cal.legend_soon": "soon",
   "cal.legend_later": "later",

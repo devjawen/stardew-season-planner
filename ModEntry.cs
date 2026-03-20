@@ -184,7 +184,8 @@ public sealed class ModEntry : Mod
          || e.NewMenu is StardewValley.Menus.GameMenu
          || e.NewMenu is StardewValley.Menus.Billboard
          || e.NewMenu is StardewValley.Menus.ItemGrabMenu
-         || e.NewMenu is StardewValley.Menus.ShopMenu)
+         || e.NewMenu is StardewValley.Menus.ShopMenu
+         || e.NewMenu?.GetType().Name == "LibraryMuseum")
         {
             UpdateSharedState();
         }
@@ -222,6 +223,7 @@ public sealed class ModEntry : Mod
             return;
 
         Item? hovered = null;
+        bool isMuseum = menu.GetType().Name == "LibraryMuseum";
 
         if (_config.ShowInventoryTooltips
             && menu is StardewValley.Menus.GameMenu gm
@@ -236,6 +238,18 @@ public sealed class ModEntry : Mod
         {
             hovered = igm.ItemsToGrabMenu?.hover(Game1.getMouseX(), Game1.getMouseY(), null)
                 ?? igm.inventory?.hover(Game1.getMouseX(), Game1.getMouseY(), null);
+        }
+        else if (_config.ShowInventoryTooltips && isMuseum)
+        {
+            var invField = menu.GetType().GetField("inventory",
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+            var inv = invField?.GetValue(menu) as StardewValley.Menus.InventoryMenu;
+            var museumHovered = inv?.hover(Game1.getMouseX(), Game1.getMouseY(), null);
+            if (museumHovered is not null)
+            {
+                TooltipHelper.DrawMuseumTooltip(b, museumHovered, menu, missing, _config);
+                return;
+            }
         }
 
         if (hovered is null)

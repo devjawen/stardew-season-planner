@@ -168,6 +168,10 @@
 
   "search.placeholder": "Ara...",
 
+  "museum.tooltip_title": "Müze Bağışı",
+  "museum.needed": "  [!] Henüz bağışlanmadı",
+  "museum.donated": "  [Tamam] Zaten bağışlandı",
+
   "cal.legend_urgent": "acil",
   "cal.legend_soon": "yakında",
   "cal.legend_later": "sonra",

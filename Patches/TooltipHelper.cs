@@ -365,6 +365,44 @@ internal static class TooltipHelper
         DrawBox(b, lines, vanillaTooltipWidth, seedScale);
     }
 
+    internal static void DrawMuseumTooltip(
+        SpriteBatch b,
+        Item hovered,
+        IClickableMenu museum,
+        IReadOnlyList<BundleItem> missing,
+        ModConfig config)
+    {
+        float scale = Math.Clamp(config.BundleTooltipScale / 100f, 0.50f, 2.00f);
+
+        var museumType = museum.GetType();
+        var suitableMethod = museumType.GetMethod("isItemSuitableForDonation",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+        var hasAnythingMethod = museumType.GetMethod("doesFarmerHaveAnything",
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        bool suitable = suitableMethod?.Invoke(museum, new object[] { hovered }) is true;
+        if (!suitable) return;
+
+        bool needsDonation = hasAnythingMethod?.Invoke(museum, new object[] { hovered }) is true;
+
+        var lines = new List<(string text, Color color)>();
+        lines.Add((I18n.MuseumTooltipTitle(), new Color(120, 80, 20)));
+
+        if (!needsDonation)
+            lines.Add((I18n.MuseumDonated(), new Color(34, 139, 34)));
+        else
+            lines.Add((I18n.MuseumNeeded(), new Color(220, 80, 0)));
+
+        var bundleMatches = missing.Where(bi => bi.MatchesItem(hovered)).ToList();
+        if (bundleMatches.Count > 0)
+        {
+            lines.Add((Separator, new Color(150, 150, 150)));
+            lines.AddRange(BuildBundleLines(bundleMatches, config));
+        }
+
+        DrawBox(b, lines, 0, scale);
+    }
+
     internal static void DrawCommunityTooltip(
         SpriteBatch b,
         Item? hovered,
