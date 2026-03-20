@@ -2,6 +2,7 @@ using HarmonyLib;
 using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
 using StardewValley.Menus;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -10,6 +11,10 @@ namespace SeasonPlanner.Patches;
 [HarmonyPatch(typeof(JunimoNoteMenu), nameof(JunimoNoteMenu.draw), new[] { typeof(SpriteBatch) })]
 internal static class JunimoNoteMenuPatch
 {
+    private static readonly FieldInfo? BundlesField =
+        typeof(JunimoNoteMenu).GetField("bundles",
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+
     private static readonly FieldInfo? CurrentPageBundleField =
         typeof(JunimoNoteMenu).GetField("currentPageBundle",
             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -37,19 +42,15 @@ internal static class JunimoNoteMenuPatch
 
         var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
         var bundleType = bundle.GetType();
-
         _ingredientsField = bundleType.GetField("ingredients", flags);
 
-        if (_ingredientsField != null)
-        {
-            var list = _ingredientsField.GetValue(bundle) as System.Collections.IList;
-            if (list != null && list.Count > 0)
-            {
-                var firstItem = list[0];
-                if (firstItem != null)
-                    _ingredientItemField = firstItem.GetType().GetField("item", flags);
-            }
-        }
+        if (_ingredientsField is null) return;
+        var list = _ingredientsField.GetValue(bundle) as IList;
+        if (list is null || list.Count == 0) return;
+
+        var first = list[0];
+        if (first is not null)
+            _ingredientItemField = first.GetType().GetField("item", flags);
     }
 
     private static Item? FindHoveredIngredient(JunimoNoteMenu menu)
@@ -57,14 +58,32 @@ internal static class JunimoNoteMenuPatch
         int mx = Game1.getMouseX();
         int my = Game1.getMouseY();
 
-        var bundle = CurrentPageBundleField?.GetValue(menu);
-        if (bundle is null) return null;
+        var currentBundle = CurrentPageBundleField?.GetValue(menu);
+        if (currentBundle is not null)
+        {
+            var item = SearchBundleIngredients(currentBundle, mx, my);
+            if (item is not null) return item;
+        }
 
+        var bundles = BundlesField?.GetValue(menu) as IList;
+        if (bundles is null) return null;
+
+        foreach (var bundle in bundles)
+        {
+            if (bundle is null) continue;
+            var item = SearchBundleIngredients(bundle, mx, my);
+            if (item is not null) return item;
+        }
+
+        return null;
+    }
+
+    private static Item? SearchBundleIngredients(object bundle, int mx, int my)
+    {
         ResolveBundleFields(bundle);
-
         if (_ingredientsField is null) return null;
 
-        var ingredients = _ingredientsField.GetValue(bundle) as System.Collections.IList;
+        var ingredients = _ingredientsField.GetValue(bundle) as IList;
         if (ingredients is null) return null;
 
         foreach (var ingredient in ingredients)
@@ -72,7 +91,7 @@ internal static class JunimoNoteMenuPatch
             if (ingredient is not ClickableTextureComponent comp) continue;
             if (!comp.bounds.Contains(mx, my)) continue;
 
-            if (_ingredientItemField != null)
+            if (_ingredientItemField is not null)
             {
                 var item = _ingredientItemField.GetValue(ingredient) as Item;
                 if (item is not null) return item;
