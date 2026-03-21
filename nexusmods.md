@@ -57,7 +57,7 @@ Mark any item as "planned". Filter the list to planned-only view. When a planned
 </div>
 
 <div align="center">
-<img src="images/1.4.0/misssingbundlelistplanned.jpg" alt="Missing Planned Items" width="680"/>
+<img src="images/1.4.0/missingbundlelistplanned.jpg" alt="Missing Planned Items" width="680"/>
 </div>
 
 **Museum Tab**
@@ -211,7 +211,7 @@ Nexus Mods'a bu sırayla yükle:
 4. `images/1.4.0/bundlelistpaneldetails.jpg` — Bundle panel detay
 5. `images/1.4.0/bundlelistpanelcalendar.png` — Takvim görünümü
 6. `images/1.4.0/bundlelistpanelplanned.jpg` — Planlanan itemlar
-7. `images/1.4.0/misssingbundlelistplanned.jpg` — Eksik planlanan itemlar
+7. `images/1.4.0/missingbundlelistplanned.jpg` — Eksik planlanan itemlar
 8. `images/1.4.0/bundlelistpanelmuseum.jpg` — Müze sekmesi
 9. `images/1.4.0/inventorytooltip.jpg` — Envanter tooltip
 10. `images/1.4.0/communitycenter.jpg` — Community Center tooltip
@@ -272,7 +272,7 @@ Switch to the calendar tab inside the panel to see a 7-column week layout. Days 
 Mark any item as "planned". Filter the list to planned-only view. When a planned item is delivered to the Community Center, you get a HUD notification.
 
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelplanned.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/misssingbundlelistplanned.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/missingbundlelistplanned.jpg[/img]
 
 [b]Museum Tab[/b]
 Track all museum donations in one place. Donated items are shown with a green badge and sorted to the bottom.

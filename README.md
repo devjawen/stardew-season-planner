@@ -74,7 +74,7 @@ Open the bundle panel with `F5` and see every missing Community Center item at a
 
 | Bundle Panel — Museum | Missing Planned Items |
 |:---:|:---:|
-| ![museum](images/1.4.0/bundlelistpanelmuseum.jpg) | ![missingplanned](images/1.4.0/misssingbundlelistplanned.jpg) |
+| ![museum](images/1.4.0/bundlelistpanelmuseum.jpg) | ![missingplanned](images/1.4.0/missingbundlelistplanned.jpg) |
 
 | Inventory Tooltip | Community Center Tooltip |
 |:---:|:---:|
