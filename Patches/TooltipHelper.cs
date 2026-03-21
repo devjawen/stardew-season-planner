@@ -586,10 +586,8 @@ internal static class TooltipHelper
         int width  = Math.Min(textW + padS * 2, sw - marginS * 2);
         int height = visible.Count * lineH + padS * 2;
 
-        int x, y;
-
-        x = marginS;
-        y = sh - height - marginS;
+        int x = marginS;
+        int y = sh - height - marginS;
 
         b.Draw(Game1.staminaRect,
             new Rectangle(x + 4, y + 4, width, height),

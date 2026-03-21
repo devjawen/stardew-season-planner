@@ -268,6 +268,11 @@ public sealed class ModEntry : Mod
 
     private void OnMenuChanged(object? sender, MenuChangedEventArgs e)
     {
+        if (e.OldMenu is StardewValley.Menus.JunimoNoteMenu)
+        {
+            _scanner.Invalidate();
+        }
+
         if (e.NewMenu is StardewValley.Menus.InventoryPage
          || e.NewMenu is StardewValley.Menus.GameMenu
          || e.NewMenu is StardewValley.Menus.Billboard
