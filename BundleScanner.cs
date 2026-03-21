@@ -666,16 +666,26 @@ public sealed class BundleScanner
             foreach (var (locationName, data) in locationData)
             {
                 if (data?.Fish is null) continue;
+
                 string mappedLocation = MapLocationName(locationName);
+                if (string.IsNullOrWhiteSpace(mappedLocation))
+                {
+                    mappedLocation = !string.IsNullOrWhiteSpace(data.DisplayName)
+                        ? data.DisplayName
+                        : PrettifyLocationName(locationName);
+                }
                 if (string.IsNullOrWhiteSpace(mappedLocation)) continue;
 
                 foreach (var fishEntry in data.Fish)
                 {
+                    if (fishEntry is null) continue;
+
                     var itemIds = new List<string>();
-                    if (!string.IsNullOrWhiteSpace(fishEntry.ItemId))
+                    if (!string.IsNullOrWhiteSpace(fishEntry.ItemId)
+                        && !fishEntry.ItemId.StartsWith("RANDOM_ITEMS", StringComparison.OrdinalIgnoreCase))
                         itemIds.Add(fishEntry.ItemId);
                     if (fishEntry.RandomItemId is not null)
-                        itemIds.AddRange(fishEntry.RandomItemId);
+                        itemIds.AddRange(fishEntry.RandomItemId.Where(id => !string.IsNullOrWhiteSpace(id)));
 
                     foreach (var rawId in itemIds)
                     {
@@ -704,6 +714,27 @@ public sealed class BundleScanner
         {
             _monitor.Log($"[BundleScanner] Data/Locations balık zenginleştirme hatası / fish enrichment error: {ex.Message}", LogLevel.Trace);
         }
+    }
+
+    private static string PrettifyLocationName(string locationName)
+    {
+        if (string.IsNullOrWhiteSpace(locationName)) return string.Empty;
+
+        int dotIdx = locationName.LastIndexOf('.');
+        string name = dotIdx >= 0 ? locationName[(dotIdx + 1)..] : locationName;
+
+        name = name.Replace('_', ' ');
+
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < name.Length; i++)
+        {
+            char c = name[i];
+            if (i > 0 && char.IsUpper(c) && !char.IsUpper(name[i - 1]) && name[i - 1] != ' ')
+                result.Append(' ');
+            result.Append(c);
+        }
+
+        return result.ToString().Trim();
     }
 
     private static string MapLocationName(string locationName) => locationName.ToLower() switch
