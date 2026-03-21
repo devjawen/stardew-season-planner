@@ -64,17 +64,25 @@ Open the bundle panel with `F5` and see every missing Community Center item at a
 
 <br/>
 
-| Bundle Panel — Details | Bundle Panel — Calendar |
+| Bundle Panel | Bundle Panel — Details |
 |:---:|:---:|
-| ![details](images/1.4.0/bundlelistpaneldetails.jpg) | ![calendar](images/1.4.0/bundlelistpanelcalendar.jpg) |
+| ![panel](images/1.4.0/bundlelistpanel.png) | ![details](images/1.4.0/bundlelistpaneldetails.jpg) |
 
-| Bundle Panel — Planned Items | Inventory Tooltip |
+| Bundle Panel — Calendar | Bundle Panel — Planned Items |
 |:---:|:---:|
-| ![planned](images/1.4.0/bundlelistpanelplanned.jpg) | ![inventory](images/1.4.0/inventorytooltip.jpg) |
+| ![calendar](images/1.4.0/bundlelistpanelcalendar.png) | ![planned](images/1.4.0/bundlelistpanelplanned.jpg) |
 
-| Community Center Tooltip | Settings (GMCM) |
+| Bundle Panel — Museum | Missing Planned Items |
 |:---:|:---:|
-| ![cc](images/1.4.0/communitycenter.jpg) | ![gmcm](images/1.4.0/genericmodmenusettings.jpg) |
+| ![museum](images/1.4.0/bundlelistpanelmuseum.jpg) | ![missingplanned](images/1.4.0/misssingbundlelistplanned.jpg) |
+
+| Inventory Tooltip | Community Center Tooltip |
+|:---:|:---:|
+| ![inventory](images/1.4.0/inventorytooltip.jpg) | ![cc](images/1.4.0/communitycenter.jpg) |
+
+| Settings (GMCM) |
+|:---:|
+| ![gmcm](images/1.4.0/genericmodmenusettings.jpg) |
 
 | Pierre's Shop | Willy's Shop | Sandy's Shop |
 |:---:|:---:|:---:|

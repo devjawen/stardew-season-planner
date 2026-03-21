@@ -35,6 +35,10 @@ Tracks every missing Community Center bundle item, marks last planting days on t
 Open the panel from anywhere. Items are grouped by category (Crop, Fish, Artisan, Forage, Construction, Other) and sorted by urgency. Use the search bar to filter by item name or bundle name instantly.
 
 <div align="center">
+<img src="images/1.4.0/bundlelistpanel.png" alt="Bundle Panel" width="680"/>
+</div>
+
+<div align="center">
 <img src="images/1.4.0/bundlelistpaneldetails.jpg" alt="Bundle Panel Details" width="680"/>
 </div>
 
@@ -42,7 +46,7 @@ Open the panel from anywhere. Items are grouped by category (Crop, Fish, Artisan
 Switch to the calendar tab inside the panel to see a 7-column week layout. Days with planting deadlines show item count badges. Hover a day to see which items are due.
 
 <div align="center">
-<img src="images/1.4.0/bundlelistpanelcalendar.jpg" alt="Calendar View" width="680"/>
+<img src="images/1.4.0/bundlelistpanelcalendar.png" alt="Calendar View" width="680"/>
 </div>
 
 **Planning System**
@@ -50,6 +54,17 @@ Mark any item as "planned". Filter the list to planned-only view. When a planned
 
 <div align="center">
 <img src="images/1.4.0/bundlelistpanelplanned.jpg" alt="Planned Items" width="680"/>
+</div>
+
+<div align="center">
+<img src="images/1.4.0/misssingbundlelistplanned.jpg" alt="Missing Planned Items" width="680"/>
+</div>
+
+**Museum Tab**
+Track all museum donations in one place. Donated items are shown with a green badge and sorted to the bottom.
+
+<div align="center">
+<img src="images/1.4.0/bundlelistpanelmuseum.jpg" alt="Museum Tab" width="680"/>
 </div>
 
 **Inventory & Chest Tooltips**
@@ -192,16 +207,19 @@ Nexus Mods'a bu sırayla yükle:
 
 1. `images/1.4.0/Banner.png` — Ana banner
 2. `images/1.4.0/Banner2.png` — İkinci banner
-3. `images/1.4.0/bundlelistpaneldetails.jpg` — Bundle panel detay
-4. `images/1.4.0/bundlelistpanelcalendar.jpg` — Takvim görünümü
-5. `images/1.4.0/bundlelistpanelplanned.jpg` — Planlanan itemlar
-6. `images/1.4.0/inventorytooltip.jpg` — Envanter tooltip
-7. `images/1.4.0/communitycenter.jpg` — Community Center tooltip
-8. `images/1.4.0/pierreshop1.jpg` — Pierre dükkanı
-9. `images/1.4.0/willys shop.jpg` — Willy dükkanı
-10. `images/1.4.0/sandys shop.jpg` — Sandy dükkanı
-11. `images/1.4.0/krabus.jpg` — Krobus dükkanı
-12. `images/1.4.0/genericmodmenusettings.jpg` — GMCM ayarlar
+3. `images/1.4.0/bundlelistpanel.png` — Bundle panel genel
+4. `images/1.4.0/bundlelistpaneldetails.jpg` — Bundle panel detay
+5. `images/1.4.0/bundlelistpanelcalendar.png` — Takvim görünümü
+6. `images/1.4.0/bundlelistpanelplanned.jpg` — Planlanan itemlar
+7. `images/1.4.0/misssingbundlelistplanned.jpg` — Eksik planlanan itemlar
+8. `images/1.4.0/bundlelistpanelmuseum.jpg` — Müze sekmesi
+9. `images/1.4.0/inventorytooltip.jpg` — Envanter tooltip
+10. `images/1.4.0/communitycenter.jpg` — Community Center tooltip
+11. `images/1.4.0/pierreshop1.jpg` — Pierre dükkanı
+12. `images/1.4.0/willys shop.jpg` — Willy dükkanı
+13. `images/1.4.0/sandys shop.jpg` — Sandy dükkanı
+14. `images/1.4.0/krabus.jpg` — Krobus dükkanı
+15. `images/1.4.0/genericmodmenusettings.jpg` — GMCM ayarlar
 
 ---
 
@@ -242,17 +260,24 @@ Season Planner tracks your Community Center progress and makes sure you never mi
 [b]Bundle Panel (F5)[/b]
 Open the panel from anywhere. Items are grouped by category (Crop, Fish, Artisan, Forage, Construction, Other) and sorted by urgency. Use the search bar to filter by item name or bundle name instantly.
 
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanel.png[/img]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpaneldetails.jpg[/img]
 
 [b]Calendar View[/b]
 Switch to the calendar tab inside the panel to see a 7-column week layout. Days with planting deadlines show item count badges. Hover a day to see which items are due.
 
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelcalendar.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelcalendar.png[/img]
 
 [b]Planning System[/b]
 Mark any item as "planned". Filter the list to planned-only view. When a planned item is delivered to the Community Center, you get a HUD notification.
 
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelplanned.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/misssingbundlelistplanned.jpg[/img]
+
+[b]Museum Tab[/b]
+Track all museum donations in one place. Donated items are shown with a green badge and sorted to the bottom.
+
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelmuseum.jpg[/img]
 
 [b]Inventory & Chest Tooltips[/b]
 Hover any item in your inventory or a chest to see which bundle it belongs to, how many are needed, quality requirements, and grow/season info.
