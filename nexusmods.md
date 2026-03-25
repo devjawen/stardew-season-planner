@@ -2,15 +2,15 @@
 
 <img src="images/1.4.0/Banner.png" alt="Season Planner Banner" width="700"/>
 
-# Season Planner & Bundle Reminder — Nexus Mods Page
+# Season Planner & Bundle Reminder
 
-**Tracks every missing Community Center bundle item, marks last planting days on the in-game calendar, and shows smart tooltips on inventory, chest, shop, and Community Center screens. Never miss a deadline again.**
+### Plan smarter. Deliver faster. Miss nothing.
 
-<br/>
+Tracks every missing Community Center bundle item, marks last planting days on the in-game calendar, and adds smart tooltips to inventory, chest, shop, and Community Center screens.
 
 [![SMAPI](https://img.shields.io/badge/SMAPI-4.1%2B-2b8a3e?style=flat-square)](https://smapi.io)
 [![Stardew Valley](https://img.shields.io/badge/Stardew%20Valley-1.6%2B-c0692e?style=flat-square)](https://www.stardewvalley.net/)
-[![Version](https://img.shields.io/badge/Version-1.4.0-blueviolet?style=flat-square)](manifest.json)
+[![Version](https://img.shields.io/badge/Version-1.4.0-1f6feb?style=flat-square)](manifest.json)
 [![License](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey?style=flat-square)](LICENSE)
 [![Languages](https://img.shields.io/badge/Languages-EN%20%7C%20TR-informational?style=flat-square)](#languages)
 
@@ -18,21 +18,40 @@
 
 ---
 
-> Bu dosya Nexus Mods mod sayfasının açıklama içeriğidir.
-> Nexus Mods editörüne yapıştırırken aşağıdaki BBCode bölümünü kullan.
+> Bu dosya Nexus Mods sayfa aciklamasi icin hazirlanmistir.
+> Nexus editore yapistirmak icin asagidaki BBCode bolumunu kullan.
 
 ---
 
-## Short Description
+## Why This Mod
 
-Tracks every missing Community Center bundle item, marks last planting days on the in-game calendar, and shows smart tooltips on inventory, chest, shop, and Community Center screens. Never miss a deadline again.
+If you have ever said "I forgot that crop", "I missed the rain fish", or "I had the item but forgot the bundle", this mod is built for you.
+
+Season Planner turns Community Center progress into a clear action list:
+- What is still missing
+- How urgent it is
+- Where and when you can get it
+- What you should do today
 
 ---
 
-## Features
+## At a Glance
 
-**Bundle Panel (F5)**
-Open the panel from anywhere. Items are grouped by category (Crop, Fish, Artisan, Forage, Construction, Other) and sorted by urgency. Use the search bar to filter by item name or bundle name instantly.
+- Open the panel anytime with F5
+- See all missing bundle items grouped and sorted by urgency
+- Mark items as planned and track completion
+- View last planting deadlines on a dedicated calendar tab
+- Get context-aware tooltips in inventory, chests, shops, and bundle screens
+- Receive HUD alerts for deadlines, rain-fish opportunities, and planned-item completion
+- Keep a session notification log inside the panel
+
+---
+
+## Feature Highlights
+
+### Bundle Panel (F5)
+
+Open from anywhere. Items are grouped by category (Crop, Fish, Artisan, Forage, Construction, Other), then sorted by urgency so your next action is always obvious.
 
 <div align="center">
 <img src="images/1.4.0/bundlelistpanel.png" alt="Bundle Panel" width="680"/>
@@ -42,15 +61,17 @@ Open the panel from anywhere. Items are grouped by category (Crop, Fish, Artisan
 <img src="images/1.4.0/bundlelistpaneldetails.jpg" alt="Bundle Panel Details" width="680"/>
 </div>
 
-**Calendar View**
-Switch to the calendar tab inside the panel to see a 7-column week layout. Days with planting deadlines show item count badges. Hover a day to see which items are due.
+### Detailed Calendar View
+
+Switch to the Calendar tab for a 7-column week layout. Deadline days show item-count badges, and hover reveals exactly which bundle items are due.
 
 <div align="center">
 <img src="images/1.4.0/bundlelistpanelcalendar.png" alt="Calendar View" width="680"/>
 </div>
 
-**Planning System**
-Mark any item as "planned". Filter the list to planned-only view. When a planned item is delivered to the Community Center, you get a HUD notification.
+### Planning System
+
+Mark any entry as planned and filter to planned-only mode. When a planned item is delivered, you get an instant HUD confirmation.
 
 <div align="center">
 <img src="images/1.4.0/bundlelistpanelplanned.jpg" alt="Planned Items" width="680"/>
@@ -60,29 +81,33 @@ Mark any item as "planned". Filter the list to planned-only view. When a planned
 <img src="images/1.4.0/missingbundlelistplanned.jpg" alt="Missing Planned Items" width="680"/>
 </div>
 
-**Museum Tab**
-Track all museum donations in one place. Donated items are shown with a green badge and sorted to the bottom.
+### Museum Tracking Tab
+
+Track donation progress in one place. Already donated entries are clearly marked and pushed down the list.
 
 <div align="center">
 <img src="images/1.4.0/bundlelistpanelmuseum.jpg" alt="Museum Tab" width="680"/>
 </div>
 
-**Inventory & Chest Tooltips**
-Hover any item in your inventory or a chest to see which bundle it belongs to, how many are needed, quality requirements, and grow/season info.
+### Smart Tooltips Everywhere
+
+Inventory and chest tooltips show:
+- Bundle name
+- Required quantity and quality
+- Season and grow info
+- Delivery status
 
 <div align="center">
 <img src="images/1.4.0/inventorytooltip.jpg" alt="Inventory Tooltip" width="680"/>
 </div>
 
-**Community Center Tooltips**
-Open a bundle inside the Community Center and hover the ingredient icons. A tooltip shows the bundle name, required quantity, fish location, season, time range, and weather conditions — directly on the bundle screen.
+Community Center ingredient hover tooltips show fish location, season, time range, and weather directly on the bundle screen.
 
 <div align="center">
 <img src="images/1.4.0/communitycenter.jpg" alt="Community Center Tooltip" width="680"/>
 </div>
 
-**Shop Tooltips**
-Hover items in Pierre's, Willy's, Sandy's, Krobus's, and other shops to see bundle info without opening the panel.
+Shop hover tooltips work in Pierre, Willy, Sandy, Krobus, and more.
 
 | Pierre's Shop | Willy's Shop | Sandy's Shop |
 |:---:|:---:|:---:|
@@ -92,19 +117,18 @@ Hover items in Pierre's, Willy's, Sandy's, Krobus's, and other shops to see bund
 |:---:|
 | ![krobus](images/1.4.0/krabus.jpg) |
 
-**HUD Alerts**
-Every morning the mod checks:
-- Planting deadlines — warns you X days before the last day to plant a crop needed for a bundle
-- Rain fish — if it will rain tomorrow and you still need a rain-only fish, you get a heads-up the night before
-- Planned item completed — notifies you when a planned item is delivered
+### HUD Alerts and Notification Log
 
-**Seed & Fruit Tree Tooltips**
-Hover any seed or fruit tree sapling to see grow time, season, last planting day, and whether a greenhouse is available.
+The mod checks each day and warns for:
+- Upcoming planting deadlines
+- Tomorrow rain chance when rain-only fish are still needed
+- Planned items completed
 
-**Notification Log**
-Inside the bundle panel, open the Log tab to review all past HUD notifications from the current session.
+You can review alert history in the panel's Log tab.
 
-**Settings (Generic Mod Config Menu)**
+### GMCM Settings
+
+All major systems are configurable in-game with Generic Mod Config Menu.
 
 <div align="center">
 <img src="images/1.4.0/genericmodmenusettings.jpg" alt="GMCM Settings" width="680"/>
@@ -112,31 +136,33 @@ Inside the bundle panel, open the Log tab to review all past HUD notifications f
 
 ---
 
-## What's New in 1.4.0
+## What Is New in 1.4.0
 
-- **Search bar** — filter the bundle panel by item name or bundle name in real time
-- **Detailed calendar** — 7-column week layout with item count badges and hover tooltips
-- **Community Center tooltips** — hover ingredient icons inside a bundle to see fish location, season, time, and weather info
-- **Completed bundle items** — tooltips now show a green "Delivered" line for already-completed items
-- **Notification log** — review past HUD alerts inside the panel
-- **Mod fish support** — fish from modded locations (SVE, etc.) now show correct location data
-- **Bilingual SMAPI logs** — all console messages shown in both Turkish and English
-- **Bundle cache fix** — completed slots tracked correctly, no false "missing" items
-- **Full i18n** — every string goes through the translation system
+- Search bar with instant item and bundle filtering
+- Detailed weekly calendar with badges and hover details
+- Community Center ingredient hover tooltips
+- Delivered-state line for completed bundle requirements
+- In-panel notification log
+- Better mod fish location support (SVE and similar content mods)
+- Bilingual SMAPI logs (TR + EN)
+- Bundle cache reliability fixes
+- Full i18n coverage for all visible strings
 
 ---
 
 ## Installation
 
-**Requirements**
-- Stardew Valley `1.6+`
-- [SMAPI](https://smapi.io) `4.1+`
-- [Generic Mod Config Menu](https://www.nexusmods.com/stardewvalley/mods/5098) *(optional)*
+### Requirements
 
-**Steps**
-1. Download the latest zip from the Files tab
-2. Extract into your `Stardew Valley/Mods/` folder
-3. Launch the game through SMAPI
+- Stardew Valley 1.6+
+- [SMAPI 4.1+](https://smapi.io)
+- [Generic Mod Config Menu](https://www.nexusmods.com/stardewvalley/mods/5098) (optional)
+
+### Steps
+
+1. Download the latest file from the Files tab
+2. Extract into Stardew Valley/Mods/
+3. Launch the game with SMAPI
 
 ---
 
@@ -144,13 +170,13 @@ Inside the bundle panel, open the Log tab to review all past HUD notifications f
 
 | Input | Action |
 |---|---|
-| `F5` | Open / close the bundle panel |
-| `ESC` or right-click | Close the panel |
-| Scroll wheel | Navigate the item list |
-| Click a tab | Filter by category |
-| Type in search box | Filter by item or bundle name |
-| Click "Plan" | Mark an item as planned |
-| Drag panel header | Reposition the panel |
+| F5 | Open or close the panel |
+| ESC or right-click | Close the panel |
+| Mouse wheel | Scroll item list |
+| Tab click | Filter category |
+| Search box | Filter by item or bundle |
+| Plan button | Mark item as planned |
+| Drag panel header | Move panel |
 
 ---
 
@@ -158,30 +184,36 @@ Inside the bundle panel, open the Log tab to review all past HUD notifications f
 
 | Setting | Default | Description |
 |---|:---:|---|
-| Show Calendar Markers | on | Highlight last planting days on the calendar |
-| Show HUD Notifications | on | Morning alerts for deadlines and rain fish |
-| Show Inventory Tooltips | on | Bundle info on hovered inventory items |
-| Show Chest Tooltips | on | Bundle info on hovered chest items |
-| Show Shop Source | on | Where to buy items, shown in tooltips |
-| Filter Construction Items | on | Hide Wood/Stone/etc. from the panel |
-| Warning Threshold (Days) | `7` | Days before deadline to start warning |
-| Panel Hotkey | `F5` | Key to open/close the bundle panel |
-| Panel Size (%) | `100` | Scale the bundle panel (50-150%) |
-| Bundle Tooltip Size (%) | `100` | Scale the bundle info tooltip (50-200%) |
-| Seed Tooltip Size (%) | `100` | Scale the planting info tooltip (50-200%) |
+| Show Calendar Markers | On | Highlight last planting days |
+| Show HUD Notifications | On | Morning deadline and rain-fish alerts |
+| Show Inventory Tooltips | On | Bundle info on inventory hover |
+| Show Chest Tooltips | On | Bundle info on chest hover |
+| Show Shop Source | On | Show where to buy items |
+| Filter Construction Items | On | Hide Wood/Stone style entries |
+| Warning Threshold (Days) | 7 | Alert lead time before deadline |
+| Panel Hotkey | F5 | Open or close panel |
+| Panel Size (%) | 100 | Scale panel (50-150) |
+| Bundle Tooltip Size (%) | 100 | Scale bundle tooltip (50-200) |
+| Seed Tooltip Size (%) | 100 | Scale seed tooltip (50-200) |
 
 ---
 
-## Mod Compatibility
+## Compatibility
 
-The mod reads `Data/Bundles`, `Data/Crops`, `Data/Shops`, `Data/Fish`, and `Data/Locations` through SMAPI's content API, so any mod that patches those assets is automatically supported.
+The mod reads Data/Bundles, Data/Crops, Data/Shops, Data/Fish, and Data/Locations through SMAPI's content API.
+
+That means mods patching these assets are supported automatically.
+
+### Explicitly Tested and Supported
+
+These mods/content packs are verified to work:
 
 | Mod | Support |
 |---|---|
 | Content Patcher | Full |
 | Stardew Valley Expanded | Full |
-| Cornucopia -- More Crops | Full |
-| Cornucopia -- Cooking Recipes | Full |
+| Cornucopia - More Crops | Full |
+| Cornucopia - Cooking Recipes | Full |
 | Bonster's Crops | Full |
 | Culinary Delight | Full |
 | Better Things | Full |
@@ -189,131 +221,165 @@ The mod reads `Data/Bundles`, `Data/Crops`, `Data/Shops`, `Data/Fish`, and `Data
 | Dynamic Game Assets | Full |
 | Generic Mod Config Menu | Full |
 
+### Notes
+
+- Most crop/fish/shop/location content mods are auto-detected if they patch standard game data assets.
+- If a mod adds custom bundle-like systems outside vanilla data paths, those may require future targeted support.
+- If you find a conflict, share your SMAPI log and mod list in the bug report page.
+
+---
+
+## Performance and Safety
+
+- No destructive data edits
+- Uses SMAPI content APIs for compatibility-first reads
+- Designed for normal gameplay sessions with lightweight checks and cached lookups
+
+---
+
+## FAQ
+
+### Does this work with Joja route?
+
+Core reminder systems still work, but the mod is primarily designed around Community Center bundle tracking.
+
+### Is GMCM required?
+
+No. The mod runs without GMCM. GMCM only adds an in-game settings UI.
+
+### Can I use this with content packs and modded fish/crops?
+
+Yes. The scanner is built to read patched game data, including common expansion mods.
+
 ---
 
 ## Languages
 
 | Language | File | Status |
 |---|---|:---:|
-| English | `i18n/default.json` | done |
-| Türkçe | `i18n/tr.json` | done |
-| *Your language?* | `i18n/xx.json` | open |
+| English | i18n/default.json | done |
+| Turkce | i18n/tr.json | done |
+| Your language? | i18n/xx.json | open |
 
 ---
 
-## Images (Upload Order for Nexus)
+## Source and Support
 
-Nexus Mods'a bu sırayla yükle:
-
-1. `images/1.4.0/Banner.png` — Ana banner
-2. `images/1.4.0/Banner2.png` — İkinci banner
-3. `images/1.4.0/bundlelistpanel.png` — Bundle panel genel
-4. `images/1.4.0/bundlelistpaneldetails.jpg` — Bundle panel detay
-5. `images/1.4.0/bundlelistpanelcalendar.png` — Takvim görünümü
-6. `images/1.4.0/bundlelistpanelplanned.jpg` — Planlanan itemlar
-7. `images/1.4.0/missingbundlelistplanned.jpg` — Eksik planlanan itemlar
-8. `images/1.4.0/bundlelistpanelmuseum.jpg` — Müze sekmesi
-9. `images/1.4.0/inventorytooltip.jpg` — Envanter tooltip
-10. `images/1.4.0/communitycenter.jpg` — Community Center tooltip
-11. `images/1.4.0/pierreshop1.jpg` — Pierre dükkanı
-12. `images/1.4.0/willys shop.jpg` — Willy dükkanı
-13. `images/1.4.0/sandys shop.jpg` — Sandy dükkanı
-14. `images/1.4.0/krabus.jpg` — Krobus dükkanı
-15. `images/1.4.0/genericmodmenusettings.jpg` — GMCM ayarlar
+- [GitHub Repository](https://github.com/devjawen/stardew-season-planner)
+- [Report a Bug](https://github.com/devjawen/stardew-season-planner/issues) (please include SMAPI log and mod list)
+- [Discussions](https://github.com/devjawen/stardew-season-planner/discussions)
 
 ---
 
-## Tags (Nexus Mods)
+## Permissions and Attribution
 
-`Gameplay Mechanics` · `User Interface` · `Quality of Life` · `Utilities` · `HUD and UI`
+This project uses CC BY-NC-ND 4.0.
+
+You are welcome to use and share this mod with credit.
+- Attribution is required
+- Commercial use is not allowed
+- Modified redistributions are not allowed
+
+License: https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+(c) 2024 Jawen
 
 ---
 
-## BBCode (Nexus Mods Editörüne Yapıştır)
+## Images Upload Order (Nexus)
+
+1. images/1.4.0/Banner.png
+2. images/1.4.0/Banner2.png
+3. images/1.4.0/bundlelistpanel.png
+4. images/1.4.0/bundlelistpaneldetails.jpg
+5. images/1.4.0/bundlelistpanelcalendar.png
+6. images/1.4.0/bundlelistpanelplanned.jpg
+7. images/1.4.0/missingbundlelistplanned.jpg
+8. images/1.4.0/bundlelistpanelmuseum.jpg
+9. images/1.4.0/inventorytooltip.jpg
+10. images/1.4.0/communitycenter.jpg
+11. images/1.4.0/pierreshop1.jpg
+12. images/1.4.0/willys shop.jpg
+13. images/1.4.0/sandys shop.jpg
+14. images/1.4.0/krabus.jpg
+15. images/1.4.0/genericmodmenusettings.jpg
+
+---
+
+## Suggested Nexus Tags
+
+Gameplay Mechanics, User Interface, Quality of Life, Utilities, HUD and UI
+
+---
+
+## BBCode (Nexus Editor)
 
 <details>
-<summary>BBCode içeriğini göster</summary>
+<summary>Click to expand BBCode</summary>
 
 ```bbcode
 [center][img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/Banner.png[/img][/center]
 
 [center][size=5][b]Season Planner & Bundle Reminder[/b][/size]
-[i]Never miss a planting deadline or bundle item again.[/i][/center]
+[i]Plan smarter. Deliver faster. Miss nothing.[/i][/center]
 
 [center]
 [url=https://smapi.io][img]https://img.shields.io/badge/SMAPI-4.1%2B-2b8a3e?style=flat-square[/img][/url]
 [url=https://www.stardewvalley.net/][img]https://img.shields.io/badge/Stardew%20Valley-1.6%2B-c0692e?style=flat-square[/img][/url]
-[img]https://img.shields.io/badge/Version-1.4.0-blueviolet?style=flat-square[/img]
+[img]https://img.shields.io/badge/Version-1.4.0-1f6feb?style=flat-square[/img]
 [img]https://img.shields.io/badge/Languages-EN%20%7C%20TR-informational?style=flat-square[/img]
 [/center]
 
 [line]
 
-[size=4][b]What is this mod?[/b][/size]
+[size=4][b]Why This Mod[/b][/size]
 
-Season Planner tracks your Community Center progress and makes sure you never miss a bundle item, planting deadline, or rain-fish opportunity. Press [b]F5[/b] to open the bundle panel at any time and see everything you still need — sorted by urgency, filtered by category, with grow times, shop sources, and seasonal info all in one place.
+If you keep missing bundle timing windows, this mod gives you a clear daily plan:
+[list]
+[*] What is missing
+[*] What is urgent
+[*] Where and when to get it
+[*] What to do next
+[/list]
+
+Press [b]F5[/b] any time to open the panel.
 
 [line]
 
-[size=4][b]Features[/b][/size]
+[size=4][b]Feature Highlights[/b][/size]
 
 [b]Bundle Panel (F5)[/b]
-Open the panel from anywhere. Items are grouped by category (Crop, Fish, Artisan, Forage, Construction, Other) and sorted by urgency. Use the search bar to filter by item name or bundle name instantly.
-
+Open anywhere. Grouped by category and sorted by urgency with instant search.
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanel.png[/img]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpaneldetails.jpg[/img]
 
-[b]Calendar View[/b]
-Switch to the calendar tab inside the panel to see a 7-column week layout. Days with planting deadlines show item count badges. Hover a day to see which items are due.
-
+[b]Detailed Calendar[/b]
+7-column weekly layout with deadline badges and hover details.
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelcalendar.png[/img]
 
 [b]Planning System[/b]
-Mark any item as "planned". Filter the list to planned-only view. When a planned item is delivered to the Community Center, you get a HUD notification.
-
+Mark planned items and get notified when they are completed.
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelplanned.jpg[/img]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/missingbundlelistplanned.jpg[/img]
 
 [b]Museum Tab[/b]
-Track all museum donations in one place. Donated items are shown with a green badge and sorted to the bottom.
-
+Track donation progress in one dedicated tab.
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelmuseum.jpg[/img]
 
-[b]Inventory & Chest Tooltips[/b]
-Hover any item in your inventory or a chest to see which bundle it belongs to, how many are needed, quality requirements, and grow/season info.
-
+[b]Smart Tooltips[/b]
+Inventory, chest, shop, and Community Center ingredient hover tooltips with useful context.
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/inventorytooltip.jpg[/img]
-
-[b]Community Center Tooltips[/b]
-Open a bundle inside the Community Center and hover the ingredient icons. A tooltip shows the bundle name, required quantity, fish location, season, time range, and weather conditions — directly on the bundle screen.
-
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/communitycenter.jpg[/img]
-
-[b]Shop Tooltips[/b]
-Hover items in Pierre's, Willy's, Sandy's, Krobus's, and other shops to see bundle info without opening the panel.
-
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/pierreshop1.jpg[/img]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/willys%20shop.jpg[/img]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/sandys%20shop.jpg[/img]
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/krabus.jpg[/img]
 
-[b]HUD Alerts[/b]
-Every morning the mod checks:
-[list]
-[*] Planting deadlines — warns you X days before the last day to plant a crop needed for a bundle
-[*] Rain fish — if it will rain tomorrow and you still need a rain-only fish, you get a heads-up the night before
-[*] Planned item completed — notifies you when a planned item is delivered
-[/list]
+[b]HUD Alerts + Log[/b]
+Daily warnings for planting deadlines, rain fish opportunities, and planned item completion. Review alert history inside the panel.
 
-[b]Seed & Fruit Tree Tooltips[/b]
-Hover any seed or fruit tree sapling to see grow time, season, last planting day, and whether a greenhouse is available.
-
-[b]Notification Log[/b]
-Inside the bundle panel, open the Log tab to review all past HUD notifications from the current session.
-
-[b]Settings (Generic Mod Config Menu)[/b]
-All options are configurable in-game via GMCM.
-
+[b]GMCM Support[/b]
+All core options configurable in-game.
 [img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/genericmodmenusettings.jpg[/img]
 
 [line]
@@ -321,33 +387,31 @@ All options are configurable in-game via GMCM.
 [size=4][b]What's New in 1.4.0[/b][/size]
 
 [list]
-[*] [b]Search bar[/b] — filter the bundle panel by item name or bundle name in real time
-[*] [b]Detailed calendar[/b] — 7-column week layout with item count badges and hover tooltips
-[*] [b]Community Center tooltips[/b] — hover ingredient icons inside a bundle to see fish location, season, time, and weather info
-[*] [b]Completed bundle items[/b] — tooltips now show a green "Delivered" line for already-completed items
-[*] [b]Notification log[/b] — review past HUD alerts inside the panel
-[*] [b]Mod fish support[/b] — fish from modded locations (SVE, etc.) now show correct location data
-[*] [b]Bilingual SMAPI logs[/b] — all console messages shown in both Turkish and English
-[*] [b]Bundle cache fix[/b] — completed slots tracked correctly, no false "missing" items
-[*] [b]Full i18n[/b] — every string goes through the translation system
+[*] Real-time search bar
+[*] Detailed calendar with hover details
+[*] Community Center ingredient tooltips
+[*] Delivered-state lines for completed requirements
+[*] Notification log tab
+[*] Better mod fish support
+[*] Bilingual SMAPI logs (TR + EN)
+[*] Bundle cache reliability fixes
+[*] Full i18n coverage
 [/list]
 
 [line]
 
 [size=4][b]Installation[/b][/size]
 
-[b]Requirements[/b]
 [list]
 [*] Stardew Valley 1.6+
 [*] [url=https://smapi.io]SMAPI 4.1+[/url]
 [*] [url=https://www.nexusmods.com/stardewvalley/mods/5098]Generic Mod Config Menu[/url] (optional)
 [/list]
 
-[b]Steps[/b]
 [list=1]
-[*] Download the latest zip from the Files tab
-[*] Extract into your Stardew Valley/Mods/ folder
-[*] Launch the game through SMAPI
+[*] Download latest file
+[*] Extract to Stardew Valley/Mods/
+[*] Launch via SMAPI
 [/list]
 
 [line]
@@ -356,79 +420,63 @@ All options are configurable in-game via GMCM.
 
 [table]
 [tr][th]Input[/th][th]Action[/th][/tr]
-[tr][td]F5[/td][td]Open / close the bundle panel[/td][/tr]
-[tr][td]ESC or right-click[/td][td]Close the panel[/td][/tr]
-[tr][td]Scroll wheel[/td][td]Navigate the item list[/td][/tr]
-[tr][td]Click a tab[/td][td]Filter by category[/td][/tr]
-[tr][td]Type in search box[/td][td]Filter by item or bundle name[/td][/tr]
-[tr][td]Click "Plan"[/td][td]Mark an item as planned[/td][/tr]
-[tr][td]Drag panel header[/td][td]Reposition the panel[/td][/tr]
+[tr][td]F5[/td][td]Open or close panel[/td][/tr]
+[tr][td]ESC / right-click[/td][td]Close panel[/td][/tr]
+[tr][td]Mouse wheel[/td][td]Scroll list[/td][/tr]
+[tr][td]Tab click[/td][td]Filter category[/td][/tr]
+[tr][td]Search box[/td][td]Filter item or bundle[/td][/tr]
+[tr][td]Plan button[/td][td]Mark planned[/td][/tr]
+[tr][td]Drag header[/td][td]Move panel[/td][/tr]
 [/table]
 
 [line]
 
-[size=4][b]Configuration[/b][/size]
+[size=4][b]Compatibility[/b][/size]
 
-[table]
-[tr][th]Setting[/th][th]Default[/th][th]Description[/th][/tr]
-[tr][td]Show Calendar Markers[/td][td]On[/td][td]Highlight last planting days on the calendar[/td][/tr]
-[tr][td]Show HUD Notifications[/td][td]On[/td][td]Morning alerts for deadlines and rain fish[/td][/tr]
-[tr][td]Show Inventory Tooltips[/td][td]On[/td][td]Bundle info on hovered inventory items[/td][/tr]
-[tr][td]Show Chest Tooltips[/td][td]On[/td][td]Bundle info on hovered chest items[/td][/tr]
-[tr][td]Show Shop Source[/td][td]On[/td][td]Where to buy items, shown in tooltips[/td][/tr]
-[tr][td]Filter Construction Items[/td][td]On[/td][td]Hide Wood/Stone/etc. from the panel[/td][/tr]
-[tr][td]Warning Threshold (Days)[/td][td]7[/td][td]Days before deadline to start warning[/td][/tr]
-[tr][td]Panel Hotkey[/td][td]F5[/td][td]Key to open/close the bundle panel[/td][/tr]
-[tr][td]Panel Size (%)[/td][td]100[/td][td]Scale the bundle panel (50-150%)[/td][/tr]
-[tr][td]Bundle Tooltip Size (%)[/td][td]100[/td][td]Scale the bundle info tooltip (50-200%)[/td][/tr]
-[tr][td]Seed Tooltip Size (%)[/td][td]100[/td][td]Scale the planting info tooltip (50-200%)[/td][/tr]
-[/table]
+Supports asset patches through SMAPI content APIs (Data/Bundles, Data/Crops, Data/Shops, Data/Fish, Data/Locations).
 
-[line]
-
-[size=4][b]Mod Compatibility[/b][/size]
-
-The mod reads Data/Bundles, Data/Crops, Data/Shops, Data/Fish, and Data/Locations through SMAPI's content API, so any mod that patches those assets is automatically supported.
-
-[table]
-[tr][th]Mod[/th][th]Support[/th][/tr]
-[tr][td]Content Patcher[/td][td]Full[/td][/tr]
-[tr][td]Stardew Valley Expanded[/td][td]Full[/td][/tr]
-[tr][td]Cornucopia -- More Crops[/td][td]Full[/td][/tr]
-[tr][td]Cornucopia -- Cooking Recipes[/td][td]Full[/td][/tr]
-[tr][td]Bonster's Crops[/td][td]Full[/td][/tr]
-[tr][td]Culinary Delight[/td][td]Full[/td][/tr]
-[tr][td]Better Things[/td][td]Full[/td][/tr]
-[tr][td]Json Assets[/td][td]Full[/td][/tr]
-[tr][td]Dynamic Game Assets[/td][td]Full[/td][/tr]
-[tr][td]Generic Mod Config Menu[/td][td]Full[/td][/tr]
-[/table]
-
-[line]
-
-[size=4][b]Languages[/b][/size]
-
+[b]Explicitly tested and supported:[/b]
 [list]
-[*] English (default)
-[*] Türkçe / Turkish (tr)
-[*] Want to add your language? Copy i18n/default.json, translate the values, and submit a PR on GitHub.
+[*] Content Patcher
+[*] Stardew Valley Expanded
+[*] Cornucopia - More Crops
+[*] Cornucopia - Cooking Recipes
+[*] Bonster's Crops
+[*] Culinary Delight
+[*] Better Things
+[*] Json Assets
+[*] Dynamic Game Assets
+[*] Generic Mod Config Menu
+[/list]
+
+[b]Compatibility notes:[/b]
+[list]
+[*] Most crop/fish/shop/location content mods are auto-detected when they patch standard game data assets.
+[*] Mods with fully custom bundle systems outside vanilla data paths may need future targeted support.
+[*] If you hit a conflict, please report with SMAPI log and full mod list.
 [/list]
 
 [line]
 
-[size=4][b]Source & Bug Reports[/b][/size]
+[size=4][b]Source and Support[/b][/size]
 
 [list]
 [*] [url=https://github.com/devjawen/stardew-season-planner]GitHub Repository[/url]
-[*] [url=https://github.com/devjawen/stardew-season-planner/issues]Report a Bug[/url] — include your SMAPI log and mod list
+[*] [url=https://github.com/devjawen/stardew-season-planner/issues]Report a Bug[/url] (include SMAPI log and mod list)
 [*] [url=https://github.com/devjawen/stardew-season-planner/discussions]Discussions[/url]
 [/list]
 
 [line]
 
-[size=4][b]License[/b][/size]
+[size=4][b]Permissions and Attribution[/b][/size]
 
-[url=https://creativecommons.org/licenses/by-nc-nd/4.0/]CC BY-NC-ND 4.0[/url] — free to use and share with attribution; no commercial use, no modified redistributions.
+[url=https://creativecommons.org/licenses/by-nc-nd/4.0/]CC BY-NC-ND 4.0[/url]
+
+[list]
+[*] Attribution required
+[*] No commercial use
+[*] No modified redistributions
+[/list]
 
 (c) 2024 Jawen
 
