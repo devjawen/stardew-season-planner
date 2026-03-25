@@ -19,7 +19,8 @@ Tracks every missing Community Center bundle item, marks last planting days on t
 ---
 
 > Bu dosya Nexus Mods sayfa aciklamasi icin hazirlanmistir.
-> Nexus editore yapistirmak icin asagidaki BBCode bolumunu kullan.
+> Nexus editore sadece asagidaki `BBCode (Nexus Editor)` bolumundeki metni yapistir.
+> Ustteki Markdown bolumu GitHub gorunumu icindir.
 
 ---
 
@@ -318,7 +319,7 @@ Gameplay Mechanics, User Interface, Quality of Life, Utilities, HUD and UI
 <summary>Click to expand BBCode</summary>
 
 ```bbcode
-[center][img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/Banner.png[/img][/center]
+[center][img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/Banner.png[/img][/center]
 
 [center][size=5][b]Season Planner & Bundle Reminder[/b][/size]
 [i]Plan smarter. Deliver faster. Miss nothing.[/i][/center]
@@ -350,37 +351,37 @@ Press [b]F5[/b] any time to open the panel.
 
 [b]Bundle Panel (F5)[/b]
 Open anywhere. Grouped by category and sorted by urgency with instant search.
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanel.png[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpaneldetails.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/bundlelistpanel.png[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/bundlelistpaneldetails.jpg[/img]
 
 [b]Detailed Calendar[/b]
 7-column weekly layout with deadline badges and hover details.
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelcalendar.png[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/bundlelistpanelcalendar.png[/img]
 
 [b]Planning System[/b]
 Mark planned items and get notified when they are completed.
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelplanned.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/missingbundlelistplanned.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/bundlelistpanelplanned.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/missingbundlelistplanned.jpg[/img]
 
 [b]Museum Tab[/b]
 Track donation progress in one dedicated tab.
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/bundlelistpanelmuseum.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/bundlelistpanelmuseum.jpg[/img]
 
 [b]Smart Tooltips[/b]
 Inventory, chest, shop, and Community Center ingredient hover tooltips with useful context.
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/inventorytooltip.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/communitycenter.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/pierreshop1.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/willys%20shop.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/sandys%20shop.jpg[/img]
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/krabus.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/inventorytooltip.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/communitycenter.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/pierreshop1.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/willys%20shop.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/sandys%20shop.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/krabus.jpg[/img]
 
 [b]HUD Alerts + Log[/b]
 Daily warnings for planting deadlines, rain fish opportunities, and planned item completion. Review alert history inside the panel.
 
 [b]GMCM Support[/b]
 All core options configurable in-game.
-[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/dev/images/1.4.0/genericmodmenusettings.jpg[/img]
+[img]https://raw.githubusercontent.com/devjawen/stardew-season-planner/main/images/1.4.0/genericmodmenusettings.jpg[/img]
 
 [line]
 
